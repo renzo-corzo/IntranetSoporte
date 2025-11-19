@@ -1,212 +1,182 @@
-# 🏢 Sistema de Infraestructura - Caja de Abogados
+# Sistema de Gestión - Infra Caja
 
-Sistema full-stack para la gestión de infraestructura, empleados, stock y tareas de la Caja de Abogados.
+Sistema integral de gestión para la Caja de Abogados, incluyendo módulos de RRHH, Stock, Relevamientos, Tareas, y más.
 
-## 🚀 Inicio Rápido
+## 📋 Características Principales
 
-### Prerrequisitos
-- Node.js >= 18.0.0
-- npm >= 8.0.0
-- PostgreSQL (para base de datos)
+### Módulo RRHH (Recursos Humanos)
+- **Gestión de Empleados**: CRUD completo con cálculo automático de días de vacaciones
+- **Vacaciones**: Sistema de solicitudes, aprobación y calendario visual
+- **Licencias**: Gestión de licencias médicas y especiales
+- **Documentos**: Almacenamiento y gestión de documentos de empleados
+- **Estadísticas**: Dashboard con métricas y reportes por año
 
-### Instalación
+### Módulo Stock
+- Gestión de productos y categorías
+- Control de inventario con alertas de stock mínimo
+- Movimientos de entrada y salida
+- Reportes y estadísticas
 
-1. **Clonar el repositorio**
-   ```bash
-   git clone <repository-url>
-   cd Infra_Caja
-   ```
+### Módulo Relevamientos
+- Gestión de equipos y su estado
+- Integración con Zabbix para monitoreo
+- Visualización de uptime y grupos
+- Filtros y ordenamiento avanzado
 
-2. **Instalar dependencias**
-   ```bash
-   # Backend
-   cd backend
-   npm install
-   
-   # Frontend
-   cd ../frontend
-   npm install
-   ```
+### Otros Módulos
+- **Tareas**: Gestión de tareas y categorías
+- **Procedimientos**: Base de conocimiento
+- **Tráfico**: Monitoreo de red con ntopng
+- **Usuarios y Roles**: Sistema de permisos granular
 
-3. **Configurar variables de entorno**
-   ```bash
-   # Backend
-   cp backend/env.example backend/.env
-   
-   # Frontend
-   cp frontend/env.example frontend/.env
-   ```
+## 🚀 Tecnologías
 
-4. **Configurar base de datos**
-   ```bash
-   cd backend
-   npx prisma generate
-   npx prisma db push
-   npx prisma db seed
-   ```
+### Backend
+- **Node.js** con **Express**
+- **TypeScript**
+- **Prisma ORM** con PostgreSQL
+- **JWT** para autenticación
+- **PM2** para gestión de procesos
 
-5. **Iniciar servicios**
-   ```bash
-   # Opción 1: Script automático (recomendado)
-   start-dev.bat
-   
-   # Opción 2: Manual
-   # Terminal 1 - Backend
-   cd backend && npm run dev
-   
-   # Terminal 2 - Frontend
-   cd frontend && npm run dev
-   ```
+### Frontend
+- **React** con **TypeScript**
+- **Vite** como build tool
+- **Tailwind CSS** para estilos
+- **React Router** para navegación
+- **Axios** para peticiones HTTP
 
-## 📁 Estructura del Proyecto
+## 📦 Instalación
 
+### Requisitos Previos
+- Node.js 18+ 
+- PostgreSQL 14+
+- npm o yarn
+
+### Backend
+
+```bash
+cd backend
+npm install
+cp .env.example .env
+# Configurar variables de entorno en .env
+npx prisma generate
+npx prisma migrate deploy
+npm run build
+npm start
 ```
-Infra_Caja/
-├── backend/                 # Backend Node.js + TypeScript
-│   ├── src/
-│   │   ├── controllers/    # Controladores de rutas
-│   │   ├── routes/         # Definición de rutas
-│   │   ├── middlewares/    # Middlewares de autenticación
-│   │   ├── services/       # Lógica de negocio
-│   │   ├── utils/          # Utilidades
-│   │   └── index.ts        # Punto de entrada
-│   ├── prisma/             # Schema y migraciones
-│   └── package.json
-├── frontend/               # Frontend React + Vite
-│   ├── src/
-│   │   ├── components/     # Componentes reutilizables
-│   │   ├── pages/          # Páginas de la aplicación
-│   │   ├── services/       # Servicios API
-│   │   ├── hooks/          # Custom hooks
-│   │   ├── utils/          # Utilidades
-│   │   └── main.tsx        # Punto de entrada
-│   └── package.json
-├── start-dev.bat          # Script para iniciar ambos servicios
-├── start-backend.bat      # Script para iniciar solo backend
-├── start-frontend.bat     # Script para iniciar solo frontend
-└── README.md
+
+### Frontend
+
+```bash
+cd frontend
+npm install
+cp .env.example .env
+# Configurar variables de entorno en .env
+npm run build
+npm start
 ```
 
 ## 🔧 Configuración
 
-### Backend (Puerto 4001)
-- **URL**: http://localhost:4001
-- **API**: http://localhost:4001/api
-- **Variables de entorno**: `backend/.env`
+### Variables de Entorno Backend
 
-### Frontend (Puerto 5174)
-- **URL**: http://localhost:5174
-- **Variables de entorno**: `frontend/.env`
-
-## 📊 Módulos Disponibles
-
-### 🔐 Autenticación
-- Login/Logout
-- Gestión de usuarios
-- Roles y permisos
-
-### 👥 Recursos Humanos (RRHH)
-- Gestión de empleados
-- Departamentos
-- Vacaciones y licencias
-- Documentos
-- Estadísticas
-
-### 📦 Stock
-- Gestión de inventario
-- Movimientos de stock
-- Categorías y productos
-- Reportes
-
-### 📋 Tareas
-- Gestión de tareas
-- Categorías
-- Procedimientos
-- Relevamientos
-
-### 🔗 Enlaces y KB
-- Base de conocimientos
-- Enlaces útiles
-- Documentación
-
-## 🛠️ Scripts Disponibles
-
-### Backend
-```bash
-npm run dev          # Desarrollo
-npm run build        # Construcción
-npm run start        # Producción
-npm run prisma:generate  # Generar cliente Prisma
-npm run prisma:push      # Sincronizar schema
-npm run prisma:migrate   # Ejecutar migraciones
-npm run prisma:studio    # Abrir Prisma Studio
-npm run lint          # Linter
-npm run format        # Formatear código
+```env
+DATABASE_URL="postgresql://usuario:password@localhost:5432/infra_caja"
+JWT_SECRET="tu_secreto_jwt"
+PORT=4000
+NODE_ENV=production
 ```
 
-### Frontend
-```bash
-npm run dev          # Desarrollo
-npm run build        # Construcción
-npm run preview      # Vista previa
-npm run lint         # Linter
-npm run format       # Formatear código
+### Variables de Entorno Frontend
+
+```env
+VITE_API_URL=http://localhost:4000/api
 ```
 
-## 🚀 Despliegue
+## 📊 Base de Datos
+
+El esquema de la base de datos está definido en `backend/prisma/schema.prisma`.
+
+Para aplicar migraciones:
+```bash
+cd backend
+npx prisma migrate deploy
+```
+
+Para generar el cliente Prisma:
+```bash
+npx prisma generate
+```
+
+## 🔐 Autenticación y Permisos
+
+El sistema utiliza JWT para autenticación y un sistema de roles y permisos granular.
+
+### Roles Principales
+- `admin`: Acceso completo
+- `admin_sistemas`: Administración de sistemas
+- `rrhh`: Gestión de RRHH
+- `stock`: Gestión de stock (solo lectura o edición según permisos)
+
+## 📝 Scripts Útiles
+
+### Backup
+```bash
+# Backup completo (servidor)
+bash scripts/backup-completo.sh
+
+# Backup local (Windows)
+powershell -ExecutionPolicy Bypass -File scripts/backup-completo-local.ps1
+```
 
 ### Desarrollo
 ```bash
-start-dev.bat
+# Iniciar backend
+cd backend && npm run dev
+
+# Iniciar frontend
+cd frontend && npm run dev
 ```
 
-### Producción
-```bash
-# Backend
-cd backend
-npm run build
-npm run start
+## 🗂️ Estructura del Proyecto
 
-# Frontend
-cd frontend
-npm run build
-# Servir archivos estáticos
+```
+Infra_Caja/
+├── backend/              # API Backend
+│   ├── src/
+│   │   ├── controllers/  # Controladores
+│   │   ├── routes/       # Rutas
+│   │   ├── middlewares/  # Middlewares
+│   │   └── services/     # Servicios
+│   ├── prisma/           # Esquema y migraciones
+│   └── scripts/          # Scripts de utilidad
+├── frontend/             # Aplicación React
+│   ├── src/
+│   │   ├── components/   # Componentes React
+│   │   ├── pages/        # Páginas
+│   │   ├── services/     # Servicios API
+│   │   └── context/      # Contextos React
+│   └── public/           # Archivos estáticos
+└── scripts/              # Scripts de deployment y utilidades
 ```
 
-## 📝 Notas de Desarrollo
+## 🔄 Deployment
 
-- **Backend**: Node.js + Express + TypeScript + Prisma + PostgreSQL
-- **Frontend**: React + Vite + TypeScript + Tailwind CSS
-- **Autenticación**: JWT
-- **Base de datos**: PostgreSQL con Prisma ORM
-- **Formateo**: Prettier + ESLint
+El sistema está configurado para producción con:
+- **PM2** para gestión de procesos
+- **Nginx** como reverse proxy
+- **PostgreSQL** como base de datos
 
-## 🐛 Solución de Problemas
+Ver `scripts/` para scripts de deployment.
 
-### Puerto en uso
-```bash
-# Encontrar proceso usando puerto 4001
-netstat -ano | findstr :4001
+## 📄 Licencia
 
-# Encontrar proceso usando puerto 5174
-netstat -ano | findstr :5174
+Propietario - Caja de Abogados
 
-# Terminar proceso
-taskkill /PID <PID> /F
-```
+## 👥 Contribuidores
 
-### Dependencias
-```bash
-# Limpiar cache
-npm cache clean --force
-
-# Reinstalar dependencias
-rm -rf node_modules package-lock.json
-npm install
-```
+Sistema desarrollado para la Caja de Abogados.
 
 ## 📞 Soporte
 
 Para soporte técnico, contactar al equipo de desarrollo.
-
-
