@@ -1,0 +1,1 @@
+-- pg_dump no disponible; dumpeo omitido

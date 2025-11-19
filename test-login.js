@@ -1,0 +1,1 @@
+(async () => {\n  const res = await fetch('http://localhost:4000/api/auth/login', {\n    method: 'POST',\n    headers: { 'Content-Type': 'application/json' },\n    body: JSON.stringify({ username: 'admin', password: 'admin123' })\n  });\n  console.log(res.status);\n  console.log(await res.text());\n})();

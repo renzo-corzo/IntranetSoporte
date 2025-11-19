@@ -1,0 +1,13 @@
+node_modules
+dist
+.git
+*.log
+*.tmp
+*.temp
+.DS_Store
+Thumbs.db
+*.zip
+*.tar.gz
+backup_temp_*
+
+

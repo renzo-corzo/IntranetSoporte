@@ -1,0 +1,403 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Rol {
+  id          Int       @id @default(autoincrement())
+  nombre      String    @unique
+  descripcion String?
+  permisos    String[]  @default([])
+  usuarios    Usuario[]
+}
+
+model Usuario {
+  id                    Int               @id @default(autoincrement())
+  username              String            @unique
+  email                 String?           @unique
+  password              String
+  nombre                String
+  rolId                 Int
+  activo                Boolean           @default(true)
+  creadoEn              DateTime          @default(now())
+  departamento          String            @default("Sin asignar")
+  alertasLeidas         AlertaStock[]     @relation("UsuarioAlertasLeidas")
+  articulosCreados      Articulo[]
+  comentarios           Comentario[]
+  movimientosAprobados  MovimientoStock[] @relation("UsuarioMovimientosAprobados")
+  movimientosRealizados MovimientoStock[] @relation("UsuarioMovimientosRealizados")
+  procedimientosCreados Procedimiento[]   @relation("UsuarioProcedimientosCreados")
+  productosCreados      ProductoStock[]   @relation("UsuarioProductosCreados")
+  relevamientos         Relevamiento[]
+  reportesGenerados     ReporteStock[]    @relation("UsuarioReportesGenerados")
+  tareasCreadas         Tarea[]           @relation("CreadorTarea")
+  tareasResponsable     Tarea[]           @relation("Tarea_responsable")
+  rol                   Rol               @relation(fields: [rolId], references: [id])
+  decisiones            Vacacion[]        @relation("Decisiones")
+}
+
+model Relevamiento {
+  id            Int      @id @default(autoincrement())
+  fecha         DateTime
+  responsable   String
+  ubicacion     String
+  observaciones String?
+  usuarioId     Int
+  creadoEn      DateTime @default(now())
+  items         Item[]
+  usuario       Usuario  @relation(fields: [usuarioId], references: [id])
+}
+
+model Item {
+  id             Int          @id @default(autoincrement())
+  tipo           String
+  marca          String
+  modelo         String
+  serie          String
+  estado         String
+  observaciones  String?
+  relevamientoId Int
+  relevamiento   Relevamiento @relation(fields: [relevamientoId], references: [id])
+}
+
+model Procedimiento {
+  id          Int      @id @default(autoincrement())
+  titulo      String
+  descripcion String
+  adjuntos    String[]
+  creadoPorId Int
+  creadoEn    DateTime @default(now())
+  creadoPor   Usuario  @relation("UsuarioProcedimientosCreados", fields: [creadoPorId], references: [id])
+  tareas      Tarea[]
+}
+
+model CategoriaTarea {
+  id          Int      @id @default(autoincrement())
+  nombre      String   @unique
+  descripcion String?
+  color       String?
+  icono       String?
+  activa      Boolean  @default(true)
+  creadoEn    DateTime @default(now())
+  tareas      Tarea[]
+}
+
+model Tarea {
+  id               Int             @id @default(autoincrement())
+  titulo           String
+  descripcion      String?
+  responsableId    Int?
+  estado           String
+  prioridad        String
+  tipo             String
+  periodo          String
+  repeticion       String
+  intervalo        Int?
+  diaDelMes        String?
+  fechaVencimiento DateTime?
+  creadaPorId      Int
+  creadaEn         DateTime        @default(now())
+  finalizadaEn     DateTime?
+  procedimientoId  Int?
+  categoriaId      Int?
+  comentarios      Comentario[]
+  categoria        CategoriaTarea? @relation(fields: [categoriaId], references: [id])
+  creadaPor        Usuario         @relation("CreadorTarea", fields: [creadaPorId], references: [id])
+  procedimiento    Procedimiento?  @relation(fields: [procedimientoId], references: [id])
+  responsable      Usuario?        @relation("Tarea_responsable", fields: [responsableId], references: [id])
+}
+
+model Comentario {
+  id        Int      @id @default(autoincrement())
+  contenido String
+  tareaId   Int
+  autorId   Int
+  creadoEn  DateTime @default(now())
+  autor     Usuario  @relation(fields: [autorId], references: [id])
+  tarea     Tarea    @relation(fields: [tareaId], references: [id])
+}
+
+model Link {
+  id       Int      @id @default(autoincrement())
+  label    String
+  url      String
+  creadoEn DateTime @default(now())
+}
+
+model Categoria {
+  id            Int         @id @default(autoincrement())
+  nombre        String
+  descripcion   String?
+  icono         String?
+  padreId       Int?
+  articulos     Articulo[]
+  padre         Categoria?  @relation("CategoriaPadre", fields: [padreId], references: [id])
+  subcategorias Categoria[] @relation("CategoriaPadre")
+}
+
+model Articulo {
+  id            Int       @id @default(autoincrement())
+  titulo        String
+  contenido     String
+  categoriaId   Int
+  adjuntos      String[]
+  creadoPorId   Int
+  creadoEn      DateTime  @default(now())
+  actualizadoEn DateTime? @updatedAt
+  categoria     Categoria @relation(fields: [categoriaId], references: [id])
+  creadoPor     Usuario   @relation(fields: [creadoPorId], references: [id])
+}
+
+model CategoriaStock {
+  id          Int             @id @default(autoincrement())
+  nombre      String          @unique
+  descripcion String?
+  icono       String?
+  color       String?
+  activo      Boolean         @default(true)
+  creadoEn    DateTime        @default(now())
+  productos   ProductoStock[]
+}
+
+model UnidadMedida {
+  id          Int             @id @default(autoincrement())
+  nombre      String          @unique
+  abreviacion String          @unique
+  tipo        String
+  activo      Boolean         @default(true)
+  productos   ProductoStock[]
+}
+
+model ProveedorStock {
+  id        Int             @id @default(autoincrement())
+  nombre    String          @unique
+  contacto  String?
+  telefono  String?
+  email     String?
+  direccion String?
+  sitioWeb  String?
+  activo    Boolean         @default(true)
+  creadoEn  DateTime        @default(now())
+  productos ProductoStock[]
+}
+
+model UbicacionStock {
+  id                 Int               @id @default(autoincrement())
+  nombre             String            @unique
+  descripcion        String?
+  tipo               String?
+  activo             Boolean           @default(true)
+  creadoEn           DateTime          @default(now())
+  movimientosDestino MovimientoStock[] @relation("MovimientoDestino")
+  movimientosOrigen  MovimientoStock[] @relation("MovimientoOrigen")
+  productos          ProductoStock[]
+}
+
+model ProductoStock {
+  id                    Int               @id @default(autoincrement())
+  codigo                String            @unique
+  nombre                String
+  descripcion           String?
+  marca                 String?
+  modelo                String?
+  numeroSerie           String?
+  codigoBarras          String?
+  stockActual           Int               @default(0)
+  stockMinimo           Int               @default(1)
+  stockMaximo           Int?
+  precioCompra          Float?
+  precioVenta           Float?
+  moneda                String            @default("ARS")
+  categoriaId           Int
+  unidadMedidaId        Int
+  proveedorId           Int?
+  ubicacionId           Int?
+  estado                String            @default("Activo")
+  condicion             String            @default("Nuevo")
+  fechaCompra           DateTime?
+  fechaVencimiento      DateTime?
+  fechaUltimoMovimiento DateTime?
+  observaciones         String?
+  tags                  String[]
+  imagenes              String[]
+  documentos            String[]
+  creadoPorId           Int
+  creadoEn              DateTime          @default(now())
+  actualizadoEn         DateTime          @updatedAt
+  alertas               AlertaStock[]
+  movimientos           MovimientoStock[]
+  categoria             CategoriaStock    @relation(fields: [categoriaId], references: [id])
+  creadoPor             Usuario           @relation("UsuarioProductosCreados", fields: [creadoPorId], references: [id])
+  proveedor             ProveedorStock?   @relation(fields: [proveedorId], references: [id])
+  ubicacion             UbicacionStock?   @relation(fields: [ubicacionId], references: [id])
+  unidadMedida          UnidadMedida      @relation(fields: [unidadMedidaId], references: [id])
+}
+
+model TipoMovimiento {
+  id              Int               @id @default(autoincrement())
+  nombre          String            @unique
+  descripcion     String?
+  afectaStock     String
+  requiereOrigen  Boolean           @default(false)
+  requiereDestino Boolean           @default(false)
+  color           String?
+  icono           String?
+  activo          Boolean           @default(true)
+  movimientos     MovimientoStock[]
+}
+
+model MovimientoStock {
+  id               Int             @id @default(autoincrement())
+  numero           String          @unique
+  productoId       Int
+  cantidad         Int
+  stockAnterior    Int
+  stockNuevo       Int
+  tipoMovimientoId Int
+  origenId         Int?
+  destinoId        Int?
+  motivo           String?
+  observaciones    String?
+  numeroFactura    String?
+  numeroRemito     String?
+  costoUnitario    Float?
+  costoTotal       Float?
+  realizadoPorId   Int
+  fechaMovimiento  DateTime        @default(now())
+  fechaRegistro    DateTime        @default(now())
+  estado           String          @default("Completado")
+  aprobadoPorId    Int?
+  fechaAprobacion  DateTime?
+  entregadoA       String?
+  aprobadoPor      Usuario?        @relation("UsuarioMovimientosAprobados", fields: [aprobadoPorId], references: [id])
+  destino          UbicacionStock? @relation("MovimientoDestino", fields: [destinoId], references: [id])
+  origen           UbicacionStock? @relation("MovimientoOrigen", fields: [origenId], references: [id])
+  producto         ProductoStock   @relation(fields: [productoId], references: [id])
+  realizadoPor     Usuario         @relation("UsuarioMovimientosRealizados", fields: [realizadoPorId], references: [id])
+  tipoMovimiento   TipoMovimiento  @relation(fields: [tipoMovimientoId], references: [id])
+}
+
+model AlertaStock {
+  id         Int           @id @default(autoincrement())
+  productoId Int
+  tipo       String
+  mensaje    String
+  nivel      String
+  activa     Boolean       @default(true)
+  leida      Boolean       @default(false)
+  creadoEn   DateTime      @default(now())
+  leidaEn    DateTime?
+  leidaPorId Int?
+  leidaPor   Usuario?      @relation("UsuarioAlertasLeidas", fields: [leidaPorId], references: [id])
+  producto   ProductoStock @relation(fields: [productoId], references: [id])
+}
+
+model ReporteStock {
+  id              Int       @id @default(autoincrement())
+  nombre          String
+  tipo            String
+  parametros      Json
+  formato         String
+  archivo         String?
+  estado          String    @default("Generando")
+  generadoPorId   Int
+  fechaGeneracion DateTime  @default(now())
+  fechaCompletado DateTime?
+  generadoPor     Usuario   @relation("UsuarioReportesGenerados", fields: [generadoPorId], references: [id])
+}
+
+model Empleado {
+  id            String           @id @default(cuid())
+  nombre        String
+  apellido      String
+  dni           String           @unique
+  email         String           @unique
+  departamento  String
+  estado        EstadoEmpleado  @default(ACTIVO)
+  fechaIngreso  DateTime
+  diasDisponibles Int           @default(20)
+  diasBase2023  Int?            // Días disponibles al inicio de 2023 (antes de sumar días por años)
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+  vacaciones    Vacacion[]
+  licencias     Licencia[]
+  documentos    DocumentoEmpleado[]
+
+  @@index([departamento])
+  @@index([estado])
+  @@index([email])
+}
+
+model Vacacion {
+  id                 String         @id @default(cuid())
+  empleadoId         String
+  fechaInicio        DateTime
+  fechaFin           DateTime
+  diasSolicitados    Int
+  observaciones      String?
+  estado             EstadoVacacion @default(PENDIENTE)
+  decididoPorId      Int?
+  comentarioDecision String?
+  decididoEn         DateTime?
+  createdAt          DateTime       @default(now())
+  updatedAt          DateTime       @updatedAt
+  empleado           Empleado       @relation(fields: [empleadoId], references: [id], onDelete: Cascade)
+  decididoPor        Usuario?       @relation("Decisiones", fields: [decididoPorId], references: [id])
+
+  @@index([estado])
+  @@index([fechaInicio, fechaFin])
+  @@index([empleadoId])
+}
+
+model Licencia {
+  id            String        @id @default(cuid())
+  empleadoId    String
+  tipo          String
+  fechaInicio   DateTime
+  fechaFin      DateTime
+  observaciones String?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  empleado      Empleado      @relation(fields: [empleadoId], references: [id], onDelete: Cascade)
+
+  @@index([empleadoId])
+  @@index([fechaInicio, fechaFin])
+}
+
+model DocumentoEmpleado {
+  id            String           @id @default(cuid())
+  empleadoId    String
+  nombreArchivo String
+  tipoArchivo   TipoDocumento?
+  urlArchivo    String
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+  empleado      Empleado         @relation(fields: [empleadoId], references: [id], onDelete: Cascade)
+
+  @@index([empleadoId])
+  @@index([tipoArchivo])
+}
+
+enum EstadoEmpleado {
+  ACTIVO
+  INACTIVO
+}
+
+enum EstadoVacacion {
+  PENDIENTE
+  APROBADA
+  RECHAZADA
+  CANCELADA
+}
+
+enum TipoDocumento {
+  DNI
+  CONTRATO
+  CERTIFICADO_MEDICO
+  CERTIFICADO_ESTUDIOS
+  OTRO
+}
