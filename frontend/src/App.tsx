@@ -17,6 +17,7 @@ import VacacionesAdmin from "./pages/vacaciones/VacacionesAdmin";
 import VacacionesRRHH from "./pages/vacaciones/VacacionesRRHH_Final";
 import DashboardRRHH from "./pages/rrhh/DashboardRRHH";
 import RolesPermisosPage from "./pages/RolesPermisos";
+import CMDB from "./pages/CMDB";
 
 const App: React.FC = () => (
   <BrowserRouter>
@@ -39,6 +40,7 @@ const App: React.FC = () => (
           <Route path="diagramas" element={<Diagramas />} />
           <Route path="admin" element={<Admin />} />
           <Route path="roles/permisos" element={<RolesPermisosPage />} />
+          <Route path="cmdb" element={<CMDB />} />
         </Route>
       </Route>
       <Route path="*" element={<Navigate to="/login" replace />} />

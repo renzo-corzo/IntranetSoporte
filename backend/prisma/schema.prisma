@@ -311,21 +311,22 @@ model ReporteStock {
 }
 
 model Empleado {
-  id            String           @id @default(cuid())
-  nombre        String
-  apellido      String
-  dni           String           @unique
-  email         String           @unique
-  departamento  String
-  estado        EstadoEmpleado  @default(ACTIVO)
-  fechaIngreso  DateTime
-  diasDisponibles Int           @default(20)
-  diasBase2023  Int?            // Días disponibles al inicio de 2023 (antes de sumar días por años)
-  createdAt     DateTime        @default(now())
-  updatedAt     DateTime        @updatedAt
-  vacaciones    Vacacion[]
-  licencias     Licencia[]
-  documentos    DocumentoEmpleado[]
+  id              String              @id @default(cuid())
+  nombre          String
+  apellido        String
+  dni             String              @unique
+  email           String              @unique
+  departamento    String
+  estado          EstadoEmpleado      @default(ACTIVO)
+  fechaIngreso    DateTime
+  diasDisponibles Int                 @default(20)
+  diasBase2023    Int? // Días disponibles al inicio de 2023 (antes de sumar días por años)
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+  vacaciones      Vacacion[]
+  licencias       Licencia[]
+  documentos      DocumentoEmpleado[]
+  equiposUsuario  EquipoUsuario[]
 
   @@index([departamento])
   @@index([estado])
@@ -354,29 +355,29 @@ model Vacacion {
 }
 
 model Licencia {
-  id            String        @id @default(cuid())
+  id            String   @id @default(cuid())
   empleadoId    String
   tipo          String
   fechaInicio   DateTime
   fechaFin      DateTime
   observaciones String?
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
-  empleado      Empleado      @relation(fields: [empleadoId], references: [id], onDelete: Cascade)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  empleado      Empleado @relation(fields: [empleadoId], references: [id], onDelete: Cascade)
 
   @@index([empleadoId])
   @@index([fechaInicio, fechaFin])
 }
 
 model DocumentoEmpleado {
-  id            String           @id @default(cuid())
+  id            String         @id @default(cuid())
   empleadoId    String
   nombreArchivo String
   tipoArchivo   TipoDocumento?
   urlArchivo    String
-  createdAt     DateTime         @default(now())
-  updatedAt     DateTime         @updatedAt
-  empleado      Empleado         @relation(fields: [empleadoId], references: [id], onDelete: Cascade)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  empleado      Empleado       @relation(fields: [empleadoId], references: [id], onDelete: Cascade)
 
   @@index([empleadoId])
   @@index([tipoArchivo])
@@ -400,4 +401,207 @@ enum TipoDocumento {
   CERTIFICADO_MEDICO
   CERTIFICADO_ESTUDIOS
   OTRO
+}
+
+// ===== CMDB / INVENTARIO DE INFRAESTRUCTURA =====
+
+enum EstadoEquipo {
+  PRODUCCION
+  TEST
+  FUERA_DE_SERVICIO
+  MANTENIMIENTO
+}
+
+enum TipoEquipoRed {
+  MIKROTIK
+  PFSENSE
+  SWITCH
+  ACCESS_POINT
+  ROUTER
+  FIREWALL
+  OTRO
+}
+
+enum TipoEquipoUsuario {
+  PC
+  NOTEBOOK
+  IMPRESORA
+  MONITOR
+  TECLADO
+  MOUSE
+  OTRO
+}
+
+enum TipoServicio {
+  SQL
+  IIS
+  ZABBIX
+  PROXY
+  NTOPNG
+  DC
+  DNS
+  DHCP
+  FILE_SERVER
+  WEB_SERVER
+  MAIL_SERVER
+  BACKUP_SERVER
+  VEEAM
+  VMWARE
+  HYPER_V
+  OTRO
+}
+
+enum TipoEquipoServicio {
+  SERVIDOR_FISICO
+  MAQUINA_VIRTUAL
+}
+
+// Servidores físicos
+model ServidorFisico {
+  id               String       @id @default(cuid())
+  nombre           String
+  ip               String?
+  rol              String? // Rol principal del servidor
+  ubicacion        String? // Ubicación física
+  serie            String?      @unique
+  garantia         DateTime? // Fecha de vencimiento de garantía
+  estado           EstadoEquipo @default(PRODUCCION)
+  fechaAlta        DateTime     @default(now())
+  fechaBaja        DateTime?
+  notasTecnicas    String? // Ej: "no apagar", "tiene backup en Veeam"
+  procesador       String?
+  ram              String?
+  almacenamiento   String?
+  sistemaOperativo String?
+  fabricante       String?
+  modelo           String?
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+
+  // Relaciones
+  maquinasVirtuales MaquinaVirtual[]
+  servicios         Servicio[]       @relation("ServidorFisicoServicios")
+
+  @@index([nombre])
+  @@index([ip])
+  @@index([estado])
+  @@index([serie])
+}
+
+// Máquinas virtuales
+model MaquinaVirtual {
+  id               String       @id @default(cuid())
+  nombre           String
+  ip               String?
+  sistemaOperativo String?
+  rol              String? // DC, SQL, Zabbix, Proxy, etc.
+  estado           EstadoEquipo @default(PRODUCCION)
+  fechaAlta        DateTime     @default(now())
+  fechaBaja        DateTime?
+  notasTecnicas    String?
+  hostId           String? // Servidor físico donde corre
+  vcpu             Int?
+  ram              String?
+  almacenamiento   String?
+  hipervisor       String? // VMware, Hyper-V, etc.
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+
+  // Relaciones
+  host      ServidorFisico? @relation(fields: [hostId], references: [id], onDelete: SetNull)
+  servicios Servicio[]      @relation("MaquinaVirtualServicios")
+
+  @@index([nombre])
+  @@index([ip])
+  @@index([estado])
+  @@index([hostId])
+}
+
+// Equipos de red
+model EquipoRed {
+  id            String        @id @default(cuid())
+  nombre        String
+  tipo          TipoEquipoRed
+  ip            String?
+  ubicacion     String?
+  serie         String?       @unique
+  fabricante    String?
+  modelo        String?
+  estado        EstadoEquipo  @default(PRODUCCION)
+  fechaAlta     DateTime      @default(now())
+  fechaBaja     DateTime?
+  notasTecnicas String?
+  firmware      String?
+  puertos       Int?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  @@index([nombre])
+  @@index([ip])
+  @@index([tipo])
+  @@index([estado])
+  @@index([serie])
+}
+
+// Equipos de usuario
+model EquipoUsuario {
+  id               String            @id @default(cuid())
+  nombre           String
+  tipo             TipoEquipoUsuario
+  ip               String?
+  ubicacion        String?
+  serie            String?           @unique
+  fabricante       String?
+  modelo           String?
+  estado           EstadoEquipo      @default(PRODUCCION)
+  fechaAlta        DateTime          @default(now())
+  fechaBaja        DateTime?
+  notasTecnicas    String?
+  sistemaOperativo String?
+  usuarioId        String? // Empleado asignado
+  area             String? // Área/Departamento
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+
+  // Relaciones
+  usuario Empleado? @relation(fields: [usuarioId], references: [id], onDelete: SetNull)
+
+  @@index([nombre])
+  @@index([ip])
+  @@index([tipo])
+  @@index([estado])
+  @@index([usuarioId])
+  @@index([area])
+  @@index([serie])
+}
+
+// Servicios que corren en servidores/VMs
+model Servicio {
+  id            String       @id @default(cuid())
+  nombre        String
+  tipo          TipoServicio
+  version       String?
+  puerto        Int?
+  estado        EstadoEquipo @default(PRODUCCION)
+  fechaAlta     DateTime     @default(now())
+  fechaBaja     DateTime?
+  notasTecnicas String?
+
+  // Relación con servidor físico o VM
+  tipoEquipo       TipoEquipoServicio
+  servidorFisicoId String?
+  maquinaVirtualId String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relaciones
+  servidorFisico ServidorFisico? @relation("ServidorFisicoServicios", fields: [servidorFisicoId], references: [id], onDelete: Cascade)
+  maquinaVirtual MaquinaVirtual? @relation("MaquinaVirtualServicios", fields: [maquinaVirtualId], references: [id], onDelete: Cascade)
+
+  @@index([nombre])
+  @@index([tipo])
+  @@index([estado])
+  @@index([servidorFisicoId])
+  @@index([maquinaVirtualId])
 }

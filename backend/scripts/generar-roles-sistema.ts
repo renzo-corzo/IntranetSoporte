@@ -23,7 +23,8 @@ const rolesSistema = [
       'kb:read', 'kb:create', 'kb:update', 'kb:delete',
       'links:read', 'links:create', 'links:update', 'links:delete',
       'zabbix:read', 'zabbix:create', 'zabbix:update', 'zabbix:delete',
-      'ver_monitor', 'trafico:read', 'trafico:manage'
+      'ver_monitor', 'trafico:read', 'trafico:manage',
+      'cmdb:read', 'cmdb:manage'
     ]
   },
   {
@@ -61,7 +62,8 @@ const rolesSistema = [
       'kb:read', 'kb:create', 'kb:update', 'kb:delete',
       'links:read', 'links:create', 'links:update', 'links:delete',
       'zabbix:read', 'zabbix:create', 'zabbix:update', 'zabbix:delete',
-      'ver_monitor', 'trafico:read', 'trafico:manage'
+      'ver_monitor', 'trafico:read', 'trafico:manage',
+      'cmdb:read', 'cmdb:manage'
     ]
   },
   {
@@ -121,7 +123,8 @@ const rolesSistema = [
       'relevamientos:read',
       'kb:read',
       'links:read',
-      'zabbix:read'
+      'zabbix:read',
+      'cmdb:read'
     ]
   }
 ];

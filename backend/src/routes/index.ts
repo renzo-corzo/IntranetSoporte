@@ -17,6 +17,11 @@ import empleadosRoutes from "./empleados.routes";
 import licenciasRoutes from "./licencias.routes";
 import documentosRoutes from "./documentos.routes";
 import traficoRoutes from "./trafico.routes";
+import servidoresFisicosRoutes from "./servidores-fisicos.routes";
+import maquinasVirtualesRoutes from "./maquinas-virtuales.routes";
+import equiposRedRoutes from "./equipos-red.routes";
+import equiposUsuarioRoutes from "./equipos-usuario.routes";
+import serviciosRoutes from "./servicios.routes";
 
 const router = Router();
 
@@ -37,6 +42,11 @@ router.use('/empleados', empleadosRoutes);
 router.use('/licencias', licenciasRoutes);
 router.use('/documentos', documentosRoutes);
 router.use('/trafico', traficoRoutes);
+router.use('/servidores-fisicos', servidoresFisicosRoutes);
+router.use('/maquinas-virtuales', maquinasVirtualesRoutes);
+router.use('/equipos-red', equiposRedRoutes);
+router.use('/equipos-usuario', equiposUsuarioRoutes);
+router.use('/servicios', serviciosRoutes);
 
 router.get('/', (req, res) => {
   res.json({ 

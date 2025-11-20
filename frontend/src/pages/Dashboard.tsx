@@ -11,7 +11,8 @@ import {
   Cog6ToothIcon,
   ClipboardDocumentCheckIcon,
   CalendarDaysIcon,
-  SignalIcon
+  SignalIcon,
+  ServerIcon
 } from "@heroicons/react/24/outline";
 
 const navItems = [
@@ -19,6 +20,7 @@ const navItems = [
   { to: "/dashboard/relevamientos", label: "Relevamientos", icon: ClipboardDocumentListIcon },
   { to: "/dashboard/links", label: "Links", icon: LinkIcon },
   { to: "/dashboard/stock", label: "Stock", icon: CubeIcon },
+  { to: "/dashboard/cmdb", label: "CMDB", icon: ServerIcon },
   { to: "/dashboard/trafico", label: "Tráfico", icon: SignalIcon },
   { to: "/dashboard/tareas", label: "Tareas", icon: CheckCircleIcon },
   { to: "/dashboard/procedimientos", label: "Procedimientos", icon: ClipboardDocumentCheckIcon },
@@ -37,6 +39,7 @@ const Dashboard: React.FC = () => {
       "/dashboard/relevamientos": "ver_monitor",
       "/dashboard/links": "ver_documentos",
       "/dashboard/stock": ["stock:read", "ver_stock"],
+      "/dashboard/cmdb": ["cmdb:read", "cmdb:manage"],
       "/dashboard/trafico": ["trafico:read", "zabbix:read", "ver_monitor"],
       "/dashboard/tareas": null,
       "/dashboard/procedimientos": "ver_documentos",
