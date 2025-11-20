@@ -46,7 +46,8 @@ const Stock: React.FC = () => {
     categoria: '',
     ubicacion: '',
     estado: '',
-    stockBajo: false
+    stockBajo: false,
+    stockAgotado: false
   });
   
   // Filtros específicos para movimientos
@@ -54,8 +55,28 @@ const Stock: React.FC = () => {
     buscar: '',
     tipoMovimiento: '',
     fechaInicio: '',
-    fechaFin: ''
+    fechaFin: '',
+    realizadoPorId: ''
   });
+  
+  // Lista de usuarios para el filtro
+  const [usuarios, setUsuarios] = useState<any[]>([]);
+  
+  // Estados para redimensionamiento de columnas
+  const [columnWidths, setColumnWidths] = useState<Record<string, number>>({
+    numero: 200,
+    producto: 200,
+    tipo: 150,
+    cantidad: 100,
+    stock: 120,
+    usuario: 180,
+    fecha: 160,
+    motivo: 200,
+    entregadoA: 150
+  });
+  const [resizingColumn, setResizingColumn] = useState<string | null>(null);
+  const [resizeStartX, setResizeStartX] = useState(0);
+  const [resizeStartWidth, setResizeStartWidth] = useState(0);
   
   // Estados para el formulario de producto
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
@@ -87,17 +108,24 @@ const Stock: React.FC = () => {
   const cargarDatos = async () => {
     try {
       setLoading(true);
-      const [dashboardData, productosData, alertasData, movimientosData] = await Promise.all([
+      const token = localStorage.getItem('token');
+      const [dashboardData, productosData, alertasData, movimientosData, usuariosData] = await Promise.all([
         obtenerDashboardStock(),
         obtenerProductos({ limit: 10 }),
         obtenerAlertas({ activa: true }),
-        obtenerMovimientos({ limit: 20 })
+        obtenerMovimientos({ limit: 20 }),
+        fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:4000/api'}/usuarios`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        }).then(res => res.json()).catch(() => [])
       ]);
       
       setDashboard(dashboardData);
       setProductos(productosData.productos);
       setAlertas(alertasData);
       setMovimientos(movimientosData.movimientos);
+      setUsuarios(Array.isArray(usuariosData) ? usuariosData : usuariosData?.data || []);
     } catch (error) {
       console.error('Error al cargar datos:', error);
     } finally {
@@ -123,7 +151,10 @@ const Stock: React.FC = () => {
         parametros.estado = filtros.estado;
       }
       if (filtros.stockBajo) {
-        parametros.stockBajo = true;
+        parametros.stockBajo = 'true';
+      }
+      if (filtros.stockAgotado) {
+        parametros.stockAgotado = 'true';
       }
 
       const productosData = await obtenerProductos(parametros);
@@ -151,6 +182,9 @@ const Stock: React.FC = () => {
       }
       if (filtrosMovimientos.fechaFin) {
         parametros.fechaFin = filtrosMovimientos.fechaFin;
+      }
+      if (filtrosMovimientos.realizadoPorId) {
+        parametros.realizadoPorId = parseInt(filtrosMovimientos.realizadoPorId);
       }
 
       const movimientosData = await obtenerMovimientos(parametros);
@@ -300,7 +334,8 @@ const Stock: React.FC = () => {
       buscar: '',
       tipoMovimiento: '',
       fechaInicio: '',
-      fechaFin: ''
+      fechaFin: '',
+      realizadoPorId: ''
     });
   };
 
@@ -310,9 +345,73 @@ const Stock: React.FC = () => {
       categoria: '',
       ubicacion: '',
       estado: '',
-      stockBajo: false
+      stockBajo: false,
+      stockAgotado: false
     });
   };
+  
+  const handleClickStockAgotado = () => {
+    setVistaActual('productos');
+    setFiltros({
+      categoria: '',
+      ubicacion: '',
+      estado: '',
+      stockBajo: false,
+      stockAgotado: true
+    });
+  };
+  
+  const handleClickStockBajo = () => {
+    setVistaActual('productos');
+    setFiltros({
+      categoria: '',
+      ubicacion: '',
+      estado: '',
+      stockBajo: true,
+      stockAgotado: false
+    });
+  };
+  
+  // Handlers para redimensionamiento de columnas
+  const handleResizeStart = (columnKey: string, e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setResizingColumn(columnKey);
+    setResizeStartX(e.clientX);
+    setResizeStartWidth(columnWidths[columnKey] || 150);
+  };
+
+  useEffect(() => {
+    const handleResizeMove = (e: MouseEvent) => {
+      if (!resizingColumn) return;
+      
+      const diff = e.clientX - resizeStartX;
+      const newWidth = Math.max(50, resizeStartWidth + diff); // Mínimo 50px
+      
+      setColumnWidths(prev => ({
+        ...prev,
+        [resizingColumn]: newWidth
+      }));
+    };
+
+    const handleResizeEnd = () => {
+      setResizingColumn(null);
+    };
+
+    if (resizingColumn) {
+      document.addEventListener('mousemove', handleResizeMove);
+      document.addEventListener('mouseup', handleResizeEnd);
+      document.body.style.cursor = 'col-resize';
+      document.body.style.userSelect = 'none';
+    }
+
+    return () => {
+      document.removeEventListener('mousemove', handleResizeMove);
+      document.removeEventListener('mouseup', handleResizeEnd);
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    };
+  }, [resizingColumn, resizeStartX, resizeStartWidth]);
 
   if (!canRead) {
     return (
@@ -415,7 +514,11 @@ const Stock: React.FC = () => {
               </div>
             </div>
 
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <div 
+              className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 cursor-pointer hover:shadow-md hover:border-yellow-400 transition-all"
+              onClick={handleClickStockBajo}
+              title="Haz clic para ver productos con stock bajo"
+            >
               <div className="flex items-center">
                 <div className="flex-shrink-0">
                   <ArrowTrendingDownIcon className="h-8 w-8 text-yellow-600" />
@@ -427,7 +530,11 @@ const Stock: React.FC = () => {
               </div>
             </div>
 
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <div 
+              className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 cursor-pointer hover:shadow-md hover:border-red-400 transition-all"
+              onClick={handleClickStockAgotado}
+              title="Haz clic para ver productos con stock agotado"
+            >
               <div className="flex items-center">
                 <div className="flex-shrink-0">
                   <ExclamationTriangleIcon className="h-8 w-8 text-red-600" />
@@ -716,6 +823,18 @@ const Stock: React.FC = () => {
                   className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   placeholder="Fecha hasta"
                 />
+                <select
+                  value={filtrosMovimientos.realizadoPorId}
+                  onChange={(e) => setFiltrosMovimientos({...filtrosMovimientos, realizadoPorId: e.target.value})}
+                  className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+                  <option value="">Todos los usuarios</option>
+                  {usuarios.map(usuario => (
+                    <option key={usuario.id} value={usuario.id}>
+                      {usuario.nombre} ({usuario.username})
+                    </option>
+                  ))}
+                </select>
                 <button
                   onClick={limpiarFiltrosMovimientos}
                   className="px-3 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm"
@@ -729,39 +848,107 @@ const Stock: React.FC = () => {
           {/* Tabla de movimientos */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
             <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
+              <table className="min-w-full divide-y divide-gray-200" style={{ tableLayout: 'fixed', width: '100%' }}>
+                <colgroup>
+                  <col style={{ width: `${columnWidths.numero}px` }} />
+                  <col style={{ width: `${columnWidths.producto}px` }} />
+                  <col style={{ width: `${columnWidths.tipo}px` }} />
+                  <col style={{ width: `${columnWidths.cantidad}px` }} />
+                  <col style={{ width: `${columnWidths.stock}px` }} />
+                  <col style={{ width: `${columnWidths.usuario}px` }} />
+                  <col style={{ width: `${columnWidths.fecha}px` }} />
+                  <col style={{ width: `${columnWidths.motivo}px` }} />
+                  <col style={{ width: `${columnWidths.entregadoA}px` }} />
+                </colgroup>
                 <thead className="bg-gray-50">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Número
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider relative">
+                      <div className="flex items-center justify-between">
+                        <span>Número</span>
+                        <div
+                          className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-blue-500 bg-transparent"
+                          onMouseDown={(e) => handleResizeStart('numero', e)}
+                        />
+                      </div>
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Producto
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider relative">
+                      <div className="flex items-center justify-between">
+                        <span>Producto</span>
+                        <div
+                          className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-blue-500 bg-transparent"
+                          onMouseDown={(e) => handleResizeStart('producto', e)}
+                        />
+                      </div>
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Tipo
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider relative">
+                      <div className="flex items-center justify-between">
+                        <span>Tipo</span>
+                        <div
+                          className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-blue-500 bg-transparent"
+                          onMouseDown={(e) => handleResizeStart('tipo', e)}
+                        />
+                      </div>
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Cantidad
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider relative">
+                      <div className="flex items-center justify-between">
+                        <span>Cantidad</span>
+                        <div
+                          className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-blue-500 bg-transparent"
+                          onMouseDown={(e) => handleResizeStart('cantidad', e)}
+                        />
+                      </div>
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Stock
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider relative">
+                      <div className="flex items-center justify-between">
+                        <span>Stock</span>
+                        <div
+                          className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-blue-500 bg-transparent"
+                          onMouseDown={(e) => handleResizeStart('stock', e)}
+                        />
+                      </div>
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Usuario
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider relative">
+                      <div className="flex items-center justify-between">
+                        <span>Usuario</span>
+                        <div
+                          className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-blue-500 bg-transparent"
+                          onMouseDown={(e) => handleResizeStart('usuario', e)}
+                        />
+                      </div>
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Fecha
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider relative">
+                      <div className="flex items-center justify-between">
+                        <span>Fecha</span>
+                        <div
+                          className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-blue-500 bg-transparent"
+                          onMouseDown={(e) => handleResizeStart('fecha', e)}
+                        />
+                      </div>
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Motivo
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider relative">
+                      <div className="flex items-center justify-between">
+                        <span>Motivo</span>
+                        <div
+                          className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-blue-500 bg-transparent"
+                          onMouseDown={(e) => handleResizeStart('motivo', e)}
+                        />
+                      </div>
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider relative">
+                      <div className="flex items-center justify-between">
+                        <span>Entregado a</span>
+                        <div
+                          className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-blue-500 bg-transparent"
+                          onMouseDown={(e) => handleResizeStart('entregadoA', e)}
+                        />
+                      </div>
                     </th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
                   {movimientos.length === 0 ? (
                     <tr>
-                      <td colSpan={8} className="px-6 py-12 text-center">
+                      <td colSpan={9} className="px-6 py-12 text-center">
                         <div className="flex flex-col items-center">
                           <ArrowTrendingUpIcon className="h-12 w-12 text-gray-400 mb-4" />
                           <h3 className="text-lg font-medium text-gray-900 mb-2">No hay movimientos registrados</h3>
@@ -772,19 +959,19 @@ const Stock: React.FC = () => {
                   ) : (
                     movimientos.map((movimiento) => (
                       <tr key={movimiento.id} className="hover:bg-gray-50">
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm font-medium text-gray-900">{movimiento.numero}</div>
-                          <div className="text-xs text-gray-500">{movimiento.estado}</div>
+                        <td className="px-6 py-4" style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          <div className="text-sm font-medium text-gray-900 truncate">{movimiento.numero}</div>
+                          <div className="text-xs text-gray-500 truncate">{movimiento.estado}</div>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm font-medium text-gray-900">{movimiento.producto.nombre}</div>
-                          <div className="text-xs text-gray-500">{movimiento.producto.codigo}</div>
+                        <td className="px-6 py-4" style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          <div className="text-sm font-medium text-gray-900 truncate">{movimiento.producto.nombre}</div>
+                          <div className="text-xs text-gray-500 truncate">{movimiento.producto.codigo}</div>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
+                        <td className="px-6 py-4" style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>
                           <div className="flex items-center">
                             <span className="mr-2">{movimiento.tipoMovimiento.icono}</span>
                             <span 
-                              className="inline-flex px-2 py-1 text-xs font-semibold rounded-full"
+                              className="inline-flex px-2 py-1 text-xs font-semibold rounded-full truncate"
                               style={{ 
                                 backgroundColor: movimiento.tipoMovimiento.color + '20',
                                 color: movimiento.tipoMovimiento.color 
@@ -806,8 +993,15 @@ const Stock: React.FC = () => {
                             <span className="font-medium">{movimiento.stockNuevo}</span>
                           </div>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm text-gray-900">{movimiento.realizadoPor.nombre}</div>
+                        <td className="px-6 py-4" style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          <div className="text-sm font-medium text-gray-900 truncate">
+                            {movimiento.realizadoPor.nombre}
+                          </div>
+                          {movimiento.realizadoPor.username && (
+                            <div className="text-xs text-gray-500 truncate">
+                              @{movimiento.realizadoPor.username}
+                            </div>
+                          )}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="text-sm text-gray-900">
@@ -817,14 +1011,23 @@ const Stock: React.FC = () => {
                             {new Date(movimiento.fechaMovimiento).toLocaleTimeString()}
                           </div>
                         </td>
-                        <td className="px-6 py-4">
-                          <div className="text-sm text-gray-900 max-w-xs truncate" title={movimiento.motivo}>
+                        <td className="px-6 py-4" style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          <div className="text-sm text-gray-900 truncate" title={movimiento.motivo}>
                             {movimiento.motivo}
                           </div>
                           {movimiento.observaciones && (
-                            <div className="text-xs text-gray-500 max-w-xs truncate" title={movimiento.observaciones}>
+                            <div className="text-xs text-gray-500 truncate" title={movimiento.observaciones}>
                               {movimiento.observaciones}
                             </div>
+                          )}
+                        </td>
+                        <td className="px-6 py-4" style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          {movimiento.entregadoA ? (
+                            <div className="text-sm text-gray-900 truncate" title={movimiento.entregadoA}>
+                              {movimiento.entregadoA}
+                            </div>
+                          ) : (
+                            <span className="text-xs text-gray-400">-</span>
                           )}
                         </td>
                       </tr>

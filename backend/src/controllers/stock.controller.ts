@@ -13,6 +13,7 @@ export const obtenerProductos = async (req: Request, res: Response) => {
       proveedor, 
       estado, 
       stockBajo, 
+      stockAgotado,
       buscar,
       page = 1,
       limit = 50
@@ -87,7 +88,13 @@ export const obtenerProductos = async (req: Request, res: Response) => {
 
     // Filtrar stock bajo si se solicita
     if (stockBajo === 'true') {
-      productos = productos.filter(p => p.stockActual <= p.stockMinimo);
+      productos = productos.filter(p => p.stockActual <= p.stockMinimo && p.stockActual > 0);
+      total = productos.length;
+    }
+    
+    // Filtrar stock agotado si se solicita
+    if (stockAgotado === 'true') {
+      productos = productos.filter(p => p.stockActual === 0);
       total = productos.length;
     }
 
@@ -386,6 +393,7 @@ export const obtenerMovimientos = async (req: Request, res: Response) => {
       fechaInicio, 
       fechaFin,
       buscar,
+      realizadoPorId,
       page = 1,
       limit = 50
     } = req.query;
@@ -420,7 +428,12 @@ export const obtenerMovimientos = async (req: Request, res: Response) => {
       }
     }
     
-    // Filtro de búsqueda por producto o número de movimiento
+    // Filtro por usuario que realizó el movimiento
+    if (realizadoPorId) {
+      where.realizadoPorId = Number(realizadoPorId);
+    }
+    
+    // Filtro de búsqueda por producto, número de movimiento, motivo o usuario
     if (buscar) {
       where.OR = [
         {
@@ -452,6 +465,20 @@ export const obtenerMovimientos = async (req: Request, res: Response) => {
             contains: buscar as string,
             mode: 'insensitive'
           }
+        },
+        {
+          entregadoA: {
+            contains: buscar as string,
+            mode: 'insensitive'
+          }
+        },
+        {
+          realizadoPor: {
+            nombre: {
+              contains: buscar as string,
+              mode: 'insensitive'
+            }
+          }
         }
       ];
     }
@@ -467,7 +494,7 @@ export const obtenerMovimientos = async (req: Request, res: Response) => {
           origen: true,
           destino: true,
           realizadoPor: {
-            select: { id: true, nombre: true }
+            select: { id: true, nombre: true, username: true, email: true }
           },
           aprobadoPor: {
             select: { id: true, nombre: true }

@@ -27,16 +27,24 @@ const ArticuloViewer: React.FC<ArticuloViewerProps> = ({
   onDelete,
   onBack
 }) => {
+  // Función helper para obtener la URL base (sin /api)
+  const getBaseUrl = () => {
+    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
+    // Si tiene /api, lo removemos; si no, usamos la URL tal cual
+    return apiUrl.replace('/api', '') || window.location.origin;
+  };
+
   // Procesar el contenido para limpiar URLs blob y convertir rutas relativas
   const processContent = (content: string) => {
     if (!content) return '';
     
     let processedContent = content;
+    const baseUrl = getBaseUrl();
     
     // Reemplazar rutas de imágenes relativas por absolutas
     processedContent = processedContent.replace(
       /<img([^>]*?)src="(?!http)([^"]*)"([^>]*?)>/gi,
-      `<img$1src="http://localhost:4000/$2"$3>`
+      `<img$1src="${baseUrl}/$2"$3>`
     );
     
     // Remover imágenes con URLs blob (que ya no funcionan)
@@ -140,7 +148,8 @@ const ArticuloViewer: React.FC<ArticuloViewerProps> = ({
                 {articulo.adjuntos.map((adjunto, index) => {
                   const isImage = /\.(jpg|jpeg|png|gif|webp|bmp|svg)$/i.test(adjunto);
                   // Construir URL completa si es una ruta relativa
-                  const imageUrl = adjunto.startsWith('http') ? adjunto : `http://localhost:4000/${adjunto}`;
+                  const baseUrl = getBaseUrl();
+                  const imageUrl = adjunto.startsWith('http') ? adjunto : `${baseUrl}/${adjunto}`;
                   
                   return (
                     <div key={index} className="border border-gray-600 rounded-lg overflow-hidden bg-gray-800">

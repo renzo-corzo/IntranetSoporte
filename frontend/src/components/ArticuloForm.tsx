@@ -373,7 +373,8 @@ const ArticuloForm: React.FC<ArticuloFormProps> = ({
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {adjuntos.map((adjunto, index) => {
                   const isImage = /\.(jpg|jpeg|png|gif|webp|bmp|svg)$/i.test(adjunto);
-                  const imageUrl = adjunto.startsWith('http') ? adjunto : `http://localhost:4000/${adjunto}`;
+                  const baseUrl = import.meta.env.VITE_API_URL?.replace('/api', '') || window.location.origin;
+                  const imageUrl = adjunto.startsWith('http') ? adjunto : `${baseUrl}/${adjunto}`;
                   
                   return (
                     <div key={index} className="border border-gray-300 rounded-lg overflow-hidden bg-white">

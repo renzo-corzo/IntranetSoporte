@@ -1,15 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { XMarkIcon } from '@heroicons/react/24/outline';
+import { XMarkIcon, PlusIcon } from '@heroicons/react/24/outline';
 import {
   obtenerTiposMovimiento,
   obtenerUbicaciones,
   obtenerProductos,
   crearMovimiento,
+  crearUbicacion,
   type TipoMovimiento,
   type UbicacionStock,
   type ProductoStock
 } from '../apiStock';
-import UbicacionQuickAdd from './UbicacionQuickAdd';
+import { empleadosService } from '../services/empleados.service';
+import ModalUbicacion from './ModalUbicacion';
 
 interface MovimientoFormProps {
   isOpen: boolean;
@@ -42,8 +44,10 @@ const MovimientoForm: React.FC<MovimientoFormProps> = ({
   const [tiposMovimiento, setTiposMovimiento] = useState<TipoMovimiento[]>([]);
   const [ubicaciones, setUbicaciones] = useState<UbicacionStock[]>([]);
   const [productos, setProductos] = useState<ProductoStock[]>([]);
+  const [empleados, setEmpleados] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [showModalUbicacion, setShowModalUbicacion] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
@@ -71,18 +75,20 @@ const MovimientoForm: React.FC<MovimientoFormProps> = ({
     try {
       const peticiones: Promise<any>[] = [
         obtenerTiposMovimiento(),
-        obtenerUbicaciones()
+        obtenerUbicaciones(),
+        empleadosService.getEmpleados({ estado: 'ACTIVO' })
       ];
       // Si no viene producto preseleccionado, cargamos listado para el select
       if (!producto) {
         peticiones.push(obtenerProductos({ limit: 100 } as any));
       }
 
-      const [tiposData, ubicacionesData, productosData] = await Promise.all(peticiones as any);
-      setTiposMovimiento(tiposData);
-      setUbicaciones(ubicacionesData);
-      if (!producto && productosData) {
-        setProductos(productosData.productos || []);
+      const resultados = await Promise.all(peticiones as any);
+      setTiposMovimiento(resultados[0]);
+      setUbicaciones(resultados[1]);
+      setEmpleados(resultados[2]?.data || []);
+      if (!producto && resultados[3]) {
+        setProductos(resultados[3].productos || []);
       }
     } catch (error) {
       console.error('Error al cargar datos iniciales:', error);
@@ -91,6 +97,7 @@ const MovimientoForm: React.FC<MovimientoFormProps> = ({
 
   const handleUbicacionCreated = (nuevaUbicacion: UbicacionStock) => {
     setUbicaciones(prev => [...prev, nuevaUbicacion]);
+    setShowModalUbicacion(false);
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
@@ -154,7 +161,7 @@ const MovimientoForm: React.FC<MovimientoFormProps> = ({
         entregadoA: formData.entregadoA || undefined, // Nuevo campo
         stockAnterior: producto ? producto.stockActual : 0,
         stockNuevo: producto ? producto.stockActual : 0, // Se calculará en el backend
-        realizadoPorId: 1, // Se obtendrá del token en el backend
+        // realizadoPorId se obtiene automáticamente del token en el backend
         fechaMovimiento: new Date().toISOString(),
         estado: 'Completado'
       };
@@ -278,9 +285,19 @@ const MovimientoForm: React.FC<MovimientoFormProps> = ({
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {tipoSeleccionado.requiereOrigen && (
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Ubicación de Origen *
-                  </label>
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="block text-sm font-medium text-gray-700">
+                      Ubicación de Origen *
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => setShowModalUbicacion(true)}
+                      className="flex items-center text-xs text-blue-600 hover:text-blue-800"
+                    >
+                      <PlusIcon className="w-3 h-3 mr-1" />
+                      Nueva
+                    </button>
+                  </div>
                   <select
                     name="origenId"
                     value={formData.origenId}
@@ -304,9 +321,19 @@ const MovimientoForm: React.FC<MovimientoFormProps> = ({
 
               {tipoSeleccionado.requiereDestino && (
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Ubicación de Destino *
-                  </label>
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="block text-sm font-medium text-gray-700">
+                      Ubicación de Destino *
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => setShowModalUbicacion(true)}
+                      className="flex items-center text-xs text-blue-600 hover:text-blue-800"
+                    >
+                      <PlusIcon className="w-3 h-3 mr-1" />
+                      Nueva
+                    </button>
+                  </div>
                   <select
                     name="destinoId"
                     value={formData.destinoId}
@@ -325,9 +352,6 @@ const MovimientoForm: React.FC<MovimientoFormProps> = ({
                   {errors.destinoId && (
                     <p className="mt-1 text-sm text-red-600">{errors.destinoId}</p>
                   )}
-                  <div className="mt-2">
-                    <UbicacionQuickAdd onUbicacionCreated={handleUbicacionCreated} />
-                  </div>
                 </div>
               )}
             </div>
@@ -358,16 +382,21 @@ const MovimientoForm: React.FC<MovimientoFormProps> = ({
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Entregado a
               </label>
-              <input
-                type="text"
+              <select
                 name="entregadoA"
                 value={formData.entregadoA}
                 onChange={handleChange}
-                placeholder="Ej: Juan Pérez, María García, Oficina Contabilidad..."
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              />
+              >
+                <option value="">Seleccionar empleado</option>
+                {empleados.map(empleado => (
+                  <option key={empleado.id} value={`${empleado.nombre} ${empleado.apellido}`}>
+                    {empleado.nombre} {empleado.apellido} - {empleado.departamento}
+                  </option>
+                ))}
+              </select>
               <p className="mt-1 text-xs text-gray-500">
-                Persona, área o ubicación que recibe el producto
+                Empleado que recibe el producto
               </p>
             </div>
           </div>
@@ -468,6 +497,13 @@ const MovimientoForm: React.FC<MovimientoFormProps> = ({
           </div>
         </form>
       </div>
+
+      {/* Modal de Ubicación */}
+      <ModalUbicacion
+        isOpen={showModalUbicacion}
+        onClose={() => setShowModalUbicacion(false)}
+        onUbicacionCreated={handleUbicacionCreated}
+      />
     </div>
   );
 };

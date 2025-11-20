@@ -64,16 +64,24 @@ const Procedimientos: React.FC = () => {
     articulos: Articulo[];
   } | null>(null);
 
+  // Función helper para obtener la URL base (sin /api)
+  const getBaseUrl = () => {
+    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
+    // Si tiene /api, lo removemos; si no, usamos la URL tal cual
+    return apiUrl.replace('/api', '') || window.location.origin;
+  };
+
   // Procesar contenido para limpiar URLs blob
   const processContent = (content: string) => {
     if (!content) return '';
     
     let processedContent = content;
+    const baseUrl = getBaseUrl();
     
     // Reemplazar rutas de imágenes relativas por absolutas
     processedContent = processedContent.replace(
       /<img([^>]*?)src="(?!http)([^"]*)"([^>]*?)>/gi,
-      `<img$1src="http://localhost:4000/$2"$3>`
+      `<img$1src="${baseUrl}/$2"$3>`
     );
     
     // Remover imágenes con URLs blob (que ya no funcionan)

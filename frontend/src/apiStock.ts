@@ -133,8 +133,9 @@ export interface MovimientoStock {
   numeroRemito?: string;
   costoUnitario?: number;
   costoTotal?: number;
+  entregadoA?: string;
   realizadoPorId: number;
-  realizadoPor: { id: number; nombre: string };
+  realizadoPor: { id: number; nombre: string; username?: string; email?: string };
   fechaMovimiento: string;
   fechaRegistro: string;
   estado: string;
@@ -195,11 +196,12 @@ export const obtenerDashboardStock = async (): Promise<DashboardStock> => {
 
 // Productos
 export const obtenerProductos = async (params?: {
-  categoria?: number;
-  ubicacion?: number;
+  categoria?: number | string;
+  ubicacion?: number | string;
   proveedor?: number;
   estado?: string;
-  stockBajo?: boolean;
+  stockBajo?: boolean | string;
+  stockAgotado?: boolean | string;
   buscar?: string;
   page?: number;
   limit?: number;
@@ -246,8 +248,10 @@ export const eliminarProducto = async (id: number): Promise<{message: string, mo
 export const obtenerMovimientos = async (params?: {
   productoId?: number;
   tipoMovimiento?: number;
-  fechaDesde?: string;
-  fechaHasta?: string;
+  fechaInicio?: string;
+  fechaFin?: string;
+  buscar?: string;
+  realizadoPorId?: number;
   page?: number;
   limit?: number;
 }): Promise<{ movimientos: MovimientoStock[]; pagination: any }> => {
