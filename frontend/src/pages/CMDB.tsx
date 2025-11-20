@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ServerIcon, CpuChipIcon, NetworkIcon, ComputerDesktopIcon, CogIcon } from '@heroicons/react/24/outline';
+import { ServerIcon, CpuChipIcon, WifiIcon, ComputerDesktopIcon, CogIcon } from '@heroicons/react/24/outline';
 import ServidoresFisicos from '../components/cmdb/ServidoresFisicos';
 import MaquinasVirtuales from '../components/cmdb/MaquinasVirtuales';
 import EquiposRed from '../components/cmdb/EquiposRed';
@@ -28,7 +28,7 @@ const CMDB: React.FC = () => {
   const tabs = [
     { id: 'servidores', label: 'Servidores Físicos', icon: ServerIcon },
     { id: 'vms', label: 'Máquinas Virtuales', icon: CpuChipIcon },
-    { id: 'red', label: 'Equipos de Red', icon: NetworkIcon },
+    { id: 'red', label: 'Equipos de Red', icon: WifiIcon },
     { id: 'usuario', label: 'Equipos de Usuario', icon: ComputerDesktopIcon },
     { id: 'servicios', label: 'Servicios', icon: CogIcon }
   ];

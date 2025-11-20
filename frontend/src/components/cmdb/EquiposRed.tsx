@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { PlusIcon, MagnifyingGlassIcon, PencilIcon, TrashIcon, NetworkIcon } from '@heroicons/react/24/outline';
+import { PlusIcon, MagnifyingGlassIcon, PencilIcon, TrashIcon, WifiIcon } from '@heroicons/react/24/outline';
 import {
   getEquiposRed,
   createEquipoRed,
@@ -164,7 +164,7 @@ const EquiposRed: React.FC = () => {
             {equipos.length === 0 ? (
               <tr>
                 <td colSpan={canManage ? 7 : 6} className="px-6 py-8 text-center text-gray-500">
-                  <NetworkIcon className="h-12 w-12 mx-auto mb-2 text-gray-300" />
+                  <WifiIcon className="h-12 w-12 mx-auto mb-2 text-gray-300" />
                   <p>No se encontraron equipos de red</p>
                 </td>
               </tr>
