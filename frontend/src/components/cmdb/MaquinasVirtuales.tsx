@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { PlusIcon, MagnifyingGlassIcon, PencilIcon, TrashIcon, CpuChipIcon } from '@heroicons/react/24/outline';
+import { PlusIcon, MagnifyingGlassIcon, PencilIcon, TrashIcon, CpuChipIcon, LinkIcon } from '@heroicons/react/24/outline';
 import {
   getMaquinasVirtuales,
   createMaquinaVirtual,
@@ -9,6 +9,7 @@ import {
 } from '../../services/cmdb.service';
 import { useAuth } from '../../context/AuthContext';
 import MaquinaVirtualForm from './MaquinaVirtualForm';
+import RelacionesView from './RelacionesView';
 
 const MaquinasVirtuales: React.FC = () => {
   const { token, user } = useAuth();
@@ -21,6 +22,8 @@ const MaquinasVirtuales: React.FC = () => {
   const [filtroEstado, setFiltroEstado] = useState('');
   const [showForm, setShowForm] = useState(false);
   const [maquinaEdit, setMaquinaEdit] = useState<MaquinaVirtual | null>(null);
+  const [showRelaciones, setShowRelaciones] = useState(false);
+  const [maquinaRelaciones, setMaquinaRelaciones] = useState<string | null>(null);
   const [total, setTotal] = useState(0);
 
   useEffect(() => {
@@ -69,6 +72,11 @@ const MaquinasVirtuales: React.FC = () => {
     setShowForm(false);
     setMaquinaEdit(null);
     cargarMaquinas();
+  };
+
+  const handleVerRelaciones = (id: string) => {
+    setMaquinaRelaciones(id);
+    setShowRelaciones(true);
   };
 
   const getEstadoColor = (estado: string) => {
@@ -147,13 +155,13 @@ const MaquinasVirtuales: React.FC = () => {
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Host</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Estado</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Servicios</th>
-              {canManage && <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Acciones</th>}
+              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Acciones</th>
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
             {maquinas.length === 0 ? (
               <tr>
-                <td colSpan={canManage ? 8 : 7} className="px-6 py-8 text-center text-gray-500">
+                <td colSpan={8} className="px-6 py-8 text-center text-gray-500">
                   <CpuChipIcon className="h-12 w-12 mx-auto mb-2 text-gray-300" />
                   <p>No se encontraron máquinas virtuales</p>
                 </td>
@@ -172,16 +180,25 @@ const MaquinasVirtuales: React.FC = () => {
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{maquina._count?.servicios || 0}</td>
-                  {canManage && (
-                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2">
-                      <button onClick={() => handleEditar(maquina)} className="text-blue-600 hover:text-blue-900">
-                        <PencilIcon className="h-5 w-5" />
-                      </button>
-                      <button onClick={() => handleEliminar(maquina.id)} className="text-red-600 hover:text-red-900">
-                        <TrashIcon className="h-5 w-5" />
-                      </button>
-                    </td>
-                  )}
+                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2">
+                    <button
+                      onClick={() => handleVerRelaciones(maquina.id)}
+                      className="text-indigo-600 hover:text-indigo-900"
+                      title="Ver relaciones"
+                    >
+                      <LinkIcon className="h-5 w-5" />
+                    </button>
+                    {canManage && (
+                      <>
+                        <button onClick={() => handleEditar(maquina)} className="text-blue-600 hover:text-blue-900">
+                          <PencilIcon className="h-5 w-5" />
+                        </button>
+                        <button onClick={() => handleEliminar(maquina.id)} className="text-red-600 hover:text-red-900">
+                          <TrashIcon className="h-5 w-5" />
+                        </button>
+                      </>
+                    )}
+                  </td>
                 </tr>
               ))
             )}
@@ -197,6 +214,17 @@ const MaquinasVirtuales: React.FC = () => {
             setMaquinaEdit(null);
           }}
           onSuccess={handleFormSubmit}
+        />
+      )}
+
+      {showRelaciones && maquinaRelaciones && (
+        <RelacionesView
+          tipo="vm"
+          id={maquinaRelaciones}
+          onClose={() => {
+            setShowRelaciones(false);
+            setMaquinaRelaciones(null);
+          }}
         />
       )}
     </div>

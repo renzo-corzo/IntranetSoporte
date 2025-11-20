@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { PlusIcon, MagnifyingGlassIcon, PencilIcon, TrashIcon, ComputerDesktopIcon } from '@heroicons/react/24/outline';
+import { PlusIcon, MagnifyingGlassIcon, PencilIcon, TrashIcon, ComputerDesktopIcon, LinkIcon } from '@heroicons/react/24/outline';
 import {
   getEquiposUsuario,
   createEquipoUsuario,
@@ -8,6 +8,8 @@ import {
   type EquipoUsuario
 } from '../../services/cmdb.service';
 import { useAuth } from '../../context/AuthContext';
+import EquipoUsuarioForm from './EquipoUsuarioForm';
+import RelacionesView from './RelacionesView';
 
 const EquiposUsuario: React.FC = () => {
   const { token, user } = useAuth();
@@ -19,6 +21,10 @@ const EquiposUsuario: React.FC = () => {
   const [buscar, setBuscar] = useState('');
   const [filtroTipo, setFiltroTipo] = useState('');
   const [filtroEstado, setFiltroEstado] = useState('');
+  const [showForm, setShowForm] = useState(false);
+  const [equipoEdit, setEquipoEdit] = useState<EquipoUsuario | null>(null);
+  const [showRelaciones, setShowRelaciones] = useState(false);
+  const [equipoRelaciones, setEquipoRelaciones] = useState<string | null>(null);
   const [total, setTotal] = useState(0);
 
   useEffect(() => {
@@ -44,6 +50,16 @@ const EquiposUsuario: React.FC = () => {
     }
   };
 
+  const handleCrear = () => {
+    setEquipoEdit(null);
+    setShowForm(true);
+  };
+
+  const handleEditar = (equipo: EquipoUsuario) => {
+    setEquipoEdit(equipo);
+    setShowForm(true);
+  };
+
   const handleEliminar = async (id: string) => {
     if (!token || !window.confirm('¿Estás seguro de eliminar este equipo?')) return;
     try {
@@ -52,6 +68,17 @@ const EquiposUsuario: React.FC = () => {
     } catch (error: any) {
       alert(error.response?.data?.error || 'Error al eliminar equipo');
     }
+  };
+
+  const handleFormSubmit = () => {
+    setShowForm(false);
+    setEquipoEdit(null);
+    cargarEquipos();
+  };
+
+  const handleVerRelaciones = (id: string) => {
+    setEquipoRelaciones(id);
+    setShowRelaciones(true);
   };
 
   const getEstadoColor = (estado: string) => {
@@ -81,7 +108,10 @@ const EquiposUsuario: React.FC = () => {
           <p className="text-gray-600 text-sm">Total: {total} equipos</p>
         </div>
         {canManage && (
-          <button className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+          <button
+            onClick={handleCrear}
+            className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+          >
             <PlusIcon className="h-5 w-5" />
             <span>Nuevo Equipo</span>
           </button>
@@ -142,13 +172,13 @@ const EquiposUsuario: React.FC = () => {
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Área</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">IP</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Estado</th>
-              {canManage && <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Acciones</th>}
+              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Acciones</th>
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
             {equipos.length === 0 ? (
               <tr>
-                <td colSpan={canManage ? 7 : 6} className="px-6 py-8 text-center text-gray-500">
+                <td colSpan={7} className="px-6 py-8 text-center text-gray-500">
                   <ComputerDesktopIcon className="h-12 w-12 mx-auto mb-2 text-gray-300" />
                   <p>No se encontraron equipos de usuario</p>
                 </td>
@@ -168,22 +198,58 @@ const EquiposUsuario: React.FC = () => {
                       {equipo.estado}
                     </span>
                   </td>
-                  {canManage && (
-                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2">
-                      <button className="text-blue-600 hover:text-blue-900">
-                        <PencilIcon className="h-5 w-5" />
+                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2">
+                    {equipo.usuarioId && (
+                      <button
+                        onClick={() => handleVerRelaciones(equipo.id)}
+                        className="text-indigo-600 hover:text-indigo-900"
+                        title="Ver relaciones"
+                      >
+                        <LinkIcon className="h-5 w-5" />
                       </button>
-                      <button onClick={() => handleEliminar(equipo.id)} className="text-red-600 hover:text-red-900">
-                        <TrashIcon className="h-5 w-5" />
-                      </button>
-                    </td>
-                  )}
+                    )}
+                    {canManage && (
+                      <>
+                        <button
+                          onClick={() => handleEditar(equipo)}
+                          className="text-blue-600 hover:text-blue-900"
+                        >
+                          <PencilIcon className="h-5 w-5" />
+                        </button>
+                        <button onClick={() => handleEliminar(equipo.id)} className="text-red-600 hover:text-red-900">
+                          <TrashIcon className="h-5 w-5" />
+                        </button>
+                      </>
+                    )}
+                  </td>
                 </tr>
               ))
             )}
           </tbody>
         </table>
       </div>
+
+      {showForm && (
+        <EquipoUsuarioForm
+          equipo={equipoEdit}
+          onClose={() => {
+            setShowForm(false);
+            setEquipoEdit(null);
+          }}
+          onSuccess={handleFormSubmit}
+        />
+      )}
+
+      {showRelaciones && equipoRelaciones && (
+        <RelacionesView
+          tipo="equipo-usuario"
+          id={equipoRelaciones}
+          onClose={() => {
+            setShowRelaciones(false);
+            setEquipoRelaciones(null);
+          }}
+        />
+      )}
     </div>
   );
 };

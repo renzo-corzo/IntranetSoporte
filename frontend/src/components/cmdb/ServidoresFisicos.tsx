@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { PlusIcon, MagnifyingGlassIcon, PencilIcon, TrashIcon, ServerIcon } from '@heroicons/react/24/outline';
+import { PlusIcon, MagnifyingGlassIcon, PencilIcon, TrashIcon, ServerIcon, LinkIcon } from '@heroicons/react/24/outline';
 import {
   getServidoresFisicos,
   createServidorFisico,
@@ -9,6 +9,7 @@ import {
 } from '../../services/cmdb.service';
 import { useAuth } from '../../context/AuthContext';
 import ServidorFisicoForm from './ServidorFisicoForm';
+import RelacionesView from './RelacionesView';
 
 const ServidoresFisicos: React.FC = () => {
   const { token, user } = useAuth();
@@ -21,6 +22,8 @@ const ServidoresFisicos: React.FC = () => {
   const [filtroEstado, setFiltroEstado] = useState('');
   const [showForm, setShowForm] = useState(false);
   const [servidorEdit, setServidorEdit] = useState<ServidorFisico | null>(null);
+  const [showRelaciones, setShowRelaciones] = useState(false);
+  const [servidorRelaciones, setServidorRelaciones] = useState<string | null>(null);
   const [total, setTotal] = useState(0);
 
   useEffect(() => {
@@ -63,6 +66,11 @@ const ServidoresFisicos: React.FC = () => {
     } catch (error: any) {
       alert(error.response?.data?.error || 'Error al eliminar servidor');
     }
+  };
+
+  const handleVerRelaciones = (id: string) => {
+    setServidorRelaciones(id);
+    setShowRelaciones(true);
   };
 
   const handleFormSubmit = () => {
@@ -150,15 +158,13 @@ const ServidoresFisicos: React.FC = () => {
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">VMs</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Servicios</th>
-              {canManage && (
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
-              )}
+              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
             {servidores.length === 0 ? (
               <tr>
-                <td colSpan={canManage ? 8 : 7} className="px-6 py-8 text-center text-gray-500">
+                <td colSpan={8} className="px-6 py-8 text-center text-gray-500">
                   <ServerIcon className="h-12 w-12 mx-auto mb-2 text-gray-300" />
                   <p>No se encontraron servidores físicos</p>
                 </td>
@@ -186,22 +192,31 @@ const ServidoresFisicos: React.FC = () => {
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                     {servidor._count?.servicios || 0}
                   </td>
-                  {canManage && (
-                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2">
-                      <button
-                        onClick={() => handleEditar(servidor)}
-                        className="text-blue-600 hover:text-blue-900"
-                      >
-                        <PencilIcon className="h-5 w-5" />
-                      </button>
-                      <button
-                        onClick={() => handleEliminar(servidor.id)}
-                        className="text-red-600 hover:text-red-900"
-                      >
-                        <TrashIcon className="h-5 w-5" />
-                      </button>
-                    </td>
-                  )}
+                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2">
+                    <button
+                      onClick={() => handleVerRelaciones(servidor.id)}
+                      className="text-indigo-600 hover:text-indigo-900"
+                      title="Ver relaciones"
+                    >
+                      <LinkIcon className="h-5 w-5" />
+                    </button>
+                    {canManage && (
+                      <>
+                        <button
+                          onClick={() => handleEditar(servidor)}
+                          className="text-blue-600 hover:text-blue-900"
+                        >
+                          <PencilIcon className="h-5 w-5" />
+                        </button>
+                        <button
+                          onClick={() => handleEliminar(servidor.id)}
+                          className="text-red-600 hover:text-red-900"
+                        >
+                          <TrashIcon className="h-5 w-5" />
+                        </button>
+                      </>
+                    )}
+                  </td>
                 </tr>
               ))
             )}
@@ -218,6 +233,18 @@ const ServidoresFisicos: React.FC = () => {
             setServidorEdit(null);
           }}
           onSuccess={handleFormSubmit}
+        />
+      )}
+
+      {/* Modal de relaciones */}
+      {showRelaciones && servidorRelaciones && (
+        <RelacionesView
+          tipo="servidor"
+          id={servidorRelaciones}
+          onClose={() => {
+            setShowRelaciones(false);
+            setServidorRelaciones(null);
+          }}
         />
       )}
     </div>

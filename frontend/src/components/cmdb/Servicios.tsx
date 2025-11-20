@@ -8,6 +8,7 @@ import {
   type Servicio
 } from '../../services/cmdb.service';
 import { useAuth } from '../../context/AuthContext';
+import ServicioForm from './ServicioForm';
 
 const Servicios: React.FC = () => {
   const { token, user } = useAuth();
@@ -19,6 +20,8 @@ const Servicios: React.FC = () => {
   const [buscar, setBuscar] = useState('');
   const [filtroTipo, setFiltroTipo] = useState('');
   const [filtroEstado, setFiltroEstado] = useState('');
+  const [showForm, setShowForm] = useState(false);
+  const [servicioEdit, setServicioEdit] = useState<Servicio | null>(null);
   const [total, setTotal] = useState(0);
 
   useEffect(() => {
@@ -44,6 +47,16 @@ const Servicios: React.FC = () => {
     }
   };
 
+  const handleCrear = () => {
+    setServicioEdit(null);
+    setShowForm(true);
+  };
+
+  const handleEditar = (servicio: Servicio) => {
+    setServicioEdit(servicio);
+    setShowForm(true);
+  };
+
   const handleEliminar = async (id: string) => {
     if (!token || !window.confirm('¿Estás seguro de eliminar este servicio?')) return;
     try {
@@ -52,6 +65,12 @@ const Servicios: React.FC = () => {
     } catch (error: any) {
       alert(error.response?.data?.error || 'Error al eliminar servicio');
     }
+  };
+
+  const handleFormSubmit = () => {
+    setShowForm(false);
+    setServicioEdit(null);
+    cargarServicios();
   };
 
   const getEstadoColor = (estado: string) => {
@@ -81,7 +100,10 @@ const Servicios: React.FC = () => {
           <p className="text-gray-600 text-sm">Total: {total} servicios</p>
         </div>
         {canManage && (
-          <button className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+          <button
+            onClick={handleCrear}
+            className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+          >
             <PlusIcon className="h-5 w-5" />
             <span>Nuevo Servicio</span>
           </button>
@@ -172,7 +194,10 @@ const Servicios: React.FC = () => {
                   </td>
                   {canManage && (
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2">
-                      <button className="text-blue-600 hover:text-blue-900">
+                      <button
+                        onClick={() => handleEditar(servicio)}
+                        className="text-blue-600 hover:text-blue-900"
+                      >
                         <PencilIcon className="h-5 w-5" />
                       </button>
                       <button onClick={() => handleEliminar(servicio.id)} className="text-red-600 hover:text-red-900">
@@ -186,6 +211,17 @@ const Servicios: React.FC = () => {
           </tbody>
         </table>
       </div>
+
+      {showForm && (
+        <ServicioForm
+          servicio={servicioEdit}
+          onClose={() => {
+            setShowForm(false);
+            setServicioEdit(null);
+          }}
+          onSuccess={handleFormSubmit}
+        />
+      )}
     </div>
   );
 };

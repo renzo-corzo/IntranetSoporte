@@ -8,6 +8,7 @@ import {
   type EquipoRed
 } from '../../services/cmdb.service';
 import { useAuth } from '../../context/AuthContext';
+import EquipoRedForm from './EquipoRedForm';
 
 const EquiposRed: React.FC = () => {
   const { token, user } = useAuth();
@@ -201,21 +202,18 @@ const EquiposRed: React.FC = () => {
       </div>
 
       {showForm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto p-6">
-            <h3 className="text-xl font-bold mb-4">{equipoEdit ? 'Editar' : 'Nuevo'} Equipo de Red</h3>
-            <p className="text-gray-600 mb-4">Formulario simplificado - Implementar completo según necesidad</p>
-            <button
-              onClick={() => {
-                setShowForm(false);
-                setEquipoEdit(null);
-              }}
-              className="px-4 py-2 bg-gray-200 rounded-lg"
-            >
-              Cerrar
-            </button>
-          </div>
-        </div>
+        <EquipoRedForm
+          equipo={equipoEdit}
+          onClose={() => {
+            setShowForm(false);
+            setEquipoEdit(null);
+          }}
+          onSuccess={() => {
+            setShowForm(false);
+            setEquipoEdit(null);
+            cargarEquipos();
+          }}
+        />
       )}
     </div>
   );
