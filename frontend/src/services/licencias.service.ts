@@ -1,6 +1,7 @@
 import axios from 'axios';
+import { buildApiUrl } from '../config/api';
 
-const API_URL = import.meta.env.VITE_API_URL + '/licencias' || 'http://localhost:4001/api/licencias';
+const API_URL = buildApiUrl('/licencias');
 
 // Configurar axios con interceptores
 const licenciasApi = axios.create({

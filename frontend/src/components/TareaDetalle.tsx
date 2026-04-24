@@ -1,15 +1,27 @@
 import React, { useState } from "react";
+import { completarTarea, updateTarea } from "../apiTareas";
 
 interface TareaDetalleProps {
   tarea: any;
+  token: string;
   onClose: () => void;
   onAddComentario: (contenido: string) => void;
   onUpdateEstado?: (estado: string, observacion?: string) => void;
+  onRefresh?: () => Promise<void>;
+  onFeedback?: (message: string, type?: "success" | "error") => void;
 }
 
-const TareaDetalle: React.FC<TareaDetalleProps> = ({ tarea, onClose, onAddComentario, onUpdateEstado }) => {
+const TareaDetalle: React.FC<TareaDetalleProps> = ({
+  tarea,
+  token,
+  onClose,
+  onAddComentario,
+  onUpdateEstado,
+  onRefresh,
+  onFeedback
+}) => {
   const [comentario, setComentario] = useState("");
-  const [observacion, setObservacion] = useState(tarea.estado === "pendiente" ? "" : (tarea.notas || ""));
+  const [observacion, setObservacion] = useState(tarea.estado === "pendiente" ? "" : (tarea.observaciones || ""));
   const [editObs, setEditObs] = useState(false);
   const [editFecha, setEditFecha] = useState(false);
   const [fechaVencimiento, setFechaVencimiento] = useState(
@@ -63,35 +75,24 @@ const TareaDetalle: React.FC<TareaDetalleProps> = ({ tarea, onClose, onAddComent
   };
 
   const handleEstado = async (estado: string) => {
-    if (estado === 'hecha') {
-      // Usar el endpoint específico para completar tareas que calcula fechas automáticamente
+    if (estado === 'resuelta') {
       try {
-        const token = localStorage.getItem('token');
-        const response = await fetch(`${import.meta.env.VITE_API_URL || "http://localhost:4000/api"}/tareas/${tarea.id}/completar`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          },
-          body: JSON.stringify({
-            observacion: observacion
-          })
-        });
-
-        if (response.ok) {
-          const tareaActualizada = await response.json();
-          alert(`Tarea completada correctamente. ${tareaActualizada.periodo ? 'Se ha programado automáticamente para la próxima fecha.' : ''}`);
-          onClose();
-          window.location.reload(); // Recargar para mostrar cambios
-        } else {
-          alert('Error al completar la tarea');
-        }
+        const tareaActualizada = await completarTarea(
+          tarea.id,
+          { observacion },
+          token
+        );
+        onFeedback?.(
+          `Tarea resuelta correctamente.${tareaActualizada.periodo ? " Se programó automáticamente la próxima ejecución." : ""}`,
+          "success"
+        );
+        await onRefresh?.();
+        onClose();
       } catch (error) {
-        console.error('Error:', error);
-        alert('Error al completar la tarea');
+        console.error('Error al completar tarea:', error);
+        onFeedback?.('Error al completar la tarea', "error");
       }
     } else {
-      // Para otros estados, usar la función original
       if (onUpdateEstado) {
         onUpdateEstado(estado, observacion);
       }
@@ -107,30 +108,20 @@ const TareaDetalle: React.FC<TareaDetalleProps> = ({ tarea, onClose, onAddComent
 
   const handleSaveFecha = async () => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`${import.meta.env.VITE_API_URL || "http://localhost:4000/api"}/tareas/${tarea.id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
+      await updateTarea(
+        tarea.id,
+        {
           ...tarea,
           fechaVencimiento: fechaVencimiento || null
-        })
-      });
-
-      if (response.ok) {
-        alert('Fecha de vencimiento actualizada correctamente');
-        setEditFecha(false);
-        // Actualizar la tarea en el componente padre
-        window.location.reload(); // Temporal - idealmente se debería actualizar el estado
-      } else {
-        alert('Error al actualizar la fecha');
-      }
+        },
+        token
+      );
+      setEditFecha(false);
+      onFeedback?.("Fecha de vencimiento actualizada correctamente", "success");
+      await onRefresh?.();
     } catch (error) {
-      console.error('Error:', error);
-      alert('Error al actualizar la fecha');
+      console.error('Error al actualizar fecha:', error);
+      onFeedback?.("Error al actualizar la fecha", "error");
     }
   };
 
@@ -142,8 +133,8 @@ const TareaDetalle: React.FC<TareaDetalleProps> = ({ tarea, onClose, onAddComent
         <div className="mb-2 text-gray-600 whitespace-pre-line">{tarea.descripcion}</div>
         <div className="mb-2 flex flex-wrap gap-4 justify-between">
           <span><b>Responsable:</b> {tarea.responsable?.nombre || "-"}</span>
-          <span><b>Estado:</b> <span className={`inline-block px-2 py-1 rounded-full text-xs font-bold shadow-sm ${tarea.estado === "pendiente" ? "bg-yellow-200 text-yellow-900" : tarea.estado === "en_progreso" ? "bg-blue-200 text-blue-900" : tarea.estado === "hecha" ? "bg-green-200 text-green-900" : tarea.estado === "bloqueada" ? "bg-red-200 text-red-900" : "bg-gray-100 text-gray-500"}`}>{tarea.estado}</span></span>
-          <span><b>Prioridad:</b> <span className={`inline-block px-2 py-1 rounded-full text-xs font-bold shadow-sm ${tarea.prioridad === "alta" ? "bg-red-200 text-red-900" : tarea.prioridad === "media" ? "bg-yellow-200 text-yellow-900" : tarea.prioridad === "baja" ? "bg-green-200 text-green-900" : "bg-gray-100 text-gray-500"}`}>{tarea.prioridad}</span></span>
+          <span><b>Estado:</b> <span className={`inline-block px-2 py-1 rounded-full text-xs font-bold shadow-sm ${tarea.estado === "pendiente" ? "bg-yellow-200 text-yellow-900" : tarea.estado === "en_curso" ? "bg-blue-200 text-blue-900" : (tarea.estado === "resuelta" || tarea.estado === "hecha") ? "bg-green-200 text-green-900" : tarea.estado === "bloqueada" ? "bg-red-200 text-red-900" : tarea.estado === "en_espera" ? "bg-indigo-200 text-indigo-900" : "bg-gray-100 text-gray-500"}`}>{tarea.estado === "hecha" ? "resuelta" : tarea.estado}</span></span>
+          <span><b>Prioridad:</b> <span className={`inline-block px-2 py-1 rounded-full text-xs font-bold shadow-sm ${tarea.prioridad === "critica" ? "bg-rose-200 text-rose-900" : tarea.prioridad === "alta" ? "bg-red-200 text-red-900" : tarea.prioridad === "media" ? "bg-yellow-200 text-yellow-900" : tarea.prioridad === "baja" ? "bg-green-200 text-green-900" : "bg-gray-100 text-gray-500"}`}>{tarea.prioridad}</span></span>
         </div>
         <div className="mb-2 flex flex-wrap gap-4 justify-between">
           <span><b>Tipo:</b> {tarea.tipo}</span>
@@ -199,7 +190,7 @@ const TareaDetalle: React.FC<TareaDetalleProps> = ({ tarea, onClose, onAddComent
         </div>
         
         {/* Información sobre próxima fecha para tareas repetitivas */}
-        {tarea.periodo && tarea.periodo !== '' && tarea.estado !== 'hecha' && (
+        {tarea.periodo && tarea.periodo !== '' && !['hecha', 'resuelta', 'cancelada'].includes(tarea.estado) && (
           <div className="mb-4 p-3 bg-blue-50 border-l-4 border-blue-400 rounded">
             <div className="flex items-center">
               <div className="flex-shrink-0">
@@ -218,16 +209,16 @@ const TareaDetalle: React.FC<TareaDetalleProps> = ({ tarea, onClose, onAddComent
         )}
 
         <div className="flex gap-4 mb-6 justify-center">
-          <button onClick={() => handleEstado("hecha")}
+          <button onClick={() => handleEstado("resuelta")}
             className="bg-green-500 hover:bg-green-700 text-white px-6 py-2 rounded-xl font-bold shadow transition flex items-center gap-2">
-            <span>✓</span> Completar
+            <span>✓</span> Resolver
             {tarea.periodo && tarea.periodo !== '' && (
               <span className="text-xs opacity-75">(y programar siguiente)</span>
             )}
           </button>
           <button onClick={() => handleEstado("bloqueada")}
             className="bg-red-500 hover:bg-red-700 text-white px-6 py-2 rounded-xl font-bold shadow transition flex items-center gap-2">
-            <span>✗</span> Marcar error
+            <span>✗</span> Bloquear
           </button>
         </div>
         <h3 className="font-semibold mb-2">Comentarios</h3>

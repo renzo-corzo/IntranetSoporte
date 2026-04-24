@@ -1,18 +1,21 @@
 import { Request, Response } from "express";
 import { PrismaClient } from "@prisma/client";
-const prisma = new PrismaClient();
+import prisma from '../lib/prisma';
 
 // Categorías
 export const getCategorias = async (req: Request, res: Response) => {
   try {
+    console.log("[KB Controller] getCategorias - Obteniendo categorías raíz");
     const categorias = await prisma.categoria.findMany({
       include: { subcategorias: true },
       where: { padreId: null },
       orderBy: { nombre: 'asc' }
     });
+    console.log(`[KB Controller] getCategorias - Encontradas ${categorias.length} categorías`);
     res.json(categorias);
-  } catch (err) {
-    res.status(500).json({ error: "Error al obtener categorías" });
+  } catch (err: any) {
+    console.error("[KB Controller] Error al obtener categorías:", err);
+    res.status(500).json({ error: "Error al obtener categorías", details: err.message });
   }
 };
 
@@ -112,14 +115,19 @@ export const getArticulos = async (req: Request, res: Response) => {
     const { categoriaId } = req.query;
     const whereClause = categoriaId ? { categoriaId: Number(categoriaId) } : {};
     
+    console.log(`[KB Controller] getArticulos - categoriaId: ${categoriaId || 'todos'}`);
+    
     const articulos = await prisma.articulo.findMany({
       where: whereClause,
       include: { categoria: true, creadoPor: true },
       orderBy: { creadoEn: 'desc' }
     });
+    
+    console.log(`[KB Controller] getArticulos - Encontrados ${articulos.length} artículos`);
     res.json(articulos);
-  } catch (err) {
-    res.status(500).json({ error: "Error al obtener artículos" });
+  } catch (err: any) {
+    console.error("[KB Controller] Error al obtener artículos:", err);
+    res.status(500).json({ error: "Error al obtener artículos", details: err.message });
   }
 };
 

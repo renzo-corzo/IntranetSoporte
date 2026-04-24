@@ -86,6 +86,24 @@ Los scripts `deploy-produccion.bat` y `deploy-produccion.ps1` están configurado
 
 Si necesitas cambiar estas configuraciones, edita los scripts.
 
+## 🔌 Conectar por PuTTY (SSH)
+
+Datos de conexión al servidor de producción:
+
+| Campo   | Valor            |
+|---------|------------------|
+| Host    | `192.168.123.147` |
+| Puerto  | `22`             |
+| Usuario | `intranet`       |
+
+**En PuTTY:**
+1. Session → Host Name: `192.168.123.147`
+2. Session → Port: `22`
+3. Connection type: SSH
+4. Open → cuando pida login, usuario: `intranet` y luego la contraseña.
+
+Si usas **clave SSH** en lugar de contraseña: Connection → SSH → Auth → Private key file for authentication: selecciona tu `.ppk` (clave convertida con PuTTYgen si la tienes en formato OpenSSH).
+
 ## 🆘 Troubleshooting
 
 ### Error: "No se pudo hacer push a GitHub"
@@ -101,4 +119,47 @@ Si necesitas cambiar estas configuraciones, edita los scripts.
 ### Error: "No se pudo compilar"
 - Revisa los logs en el servidor: `ssh intranet@192.168.123.147 "pm2 logs infra-backend-prod"`
 - Verifica que las dependencias estén instaladas: `npm install`
+
+### Error: 404 NOT FOUND al abrir `/dashboard/relevamientos` (o "Check flash:/http.zip")
+
+Puede deberse a dos cosas:
+
+1. **La URL no llega al servidor correcto**  
+   El mensaje "Check flash:/http.zip" suele aparecer en **routers o dispositivos embebidos**, no en el servidor de la app. Si el nombre `intranet.caja-abogados.org.ar` apunta a otro equipo (ej. el router), verás ese 404.
+   - **Qué hacer:** Probar entrando por IP: `http://192.168.123.147/` (y luego `http://192.168.123.147/dashboard/relevamientos`). Si así funciona, hay que corregir DNS o el equipo al que apunta el nombre para que sea `192.168.123.147`.
+
+2. **Nginx sin fallback para la SPA**  
+   La app es una SPA: rutas como `/dashboard/relevamientos` no son archivos en disco; el servidor debe devolver siempre `index.html` para que React Router funcione.
+   - **Qué hacer:** En el servidor, revisar que Nginx tenga algo como:
+     ```nginx
+     location / {
+         try_files $uri $uri/ /index.html;
+     }
+     ```
+   - Ejemplo completo: ver `docs/nginx-infra-caja.conf.example`. Después: `sudo nginx -t` y `sudo systemctl reload nginx`.
+
+### No puedo conectarme por PuTTY al servidor
+
+Comprueba en este orden:
+
+1. **Red**  
+   El servidor `192.168.123.147` está en una red interna. Tu PC debe estar en la **misma red** (oficina, misma VLAN) o tener **VPN** que te dé acceso a esa red. Si trabajas desde casa sin VPN, es normal que no conecte.
+
+2. **Ping**  
+   En CMD o PowerShell: `ping 192.168.123.147`  
+   - Si no hay respuesta: problema de red (firewall, VPN, o no estás en la red correcta).  
+   - Si responde: la red llega; el fallo puede ser el puerto 22 o SSH.
+
+3. **Puerto 22 abierto**  
+   En PowerShell: `Test-NetConnection -ComputerName 192.168.123.147 -Port 22`  
+   - Si `TcpTestSucceeded : False`: un firewall (tu PC, la red o el servidor) está bloqueando SSH. Que alguien con acceso al servidor o a la red revise reglas de firewall y que el servicio `sshd` esté activo.  
+   - Si `TcpTestSucceeded : True`: el puerto está abierto; el problema suele ser usuario/contraseña o clave SSH.
+
+4. **Usuario y contraseña**  
+   Usuario correcto: `intranet`. Si usas clave SSH, en PuTTY configura la clave en Connection → SSH → Auth (y que en el servidor esté tu clave pública en `~/.ssh/authorized_keys` del usuario `intranet`).
+
+5. **Mensaje concreto de PuTTY**  
+   - "Connection timed out" → red o firewall (pasos 1–3).  
+   - "Connection refused" → en el servidor no hay nada escuchando en el 22 (SSH apagado o otro puerto).  
+   - "Access denied" o "Authentication failed" → usuario, contraseña o clave incorrectos (paso 4).
 

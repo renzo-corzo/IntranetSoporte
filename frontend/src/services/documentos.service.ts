@@ -1,6 +1,7 @@
 import axios from 'axios';
+import { buildApiUrl } from '../config/api';
 
-const API_URL = import.meta.env.VITE_API_URL + '/documentos' || 'http://localhost:4001/api/documentos';
+const API_URL = buildApiUrl('/documentos');
 
 // Configurar axios con interceptores
 const documentosApi = axios.create({

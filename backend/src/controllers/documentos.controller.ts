@@ -1,10 +1,9 @@
 import { Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
 import { upload } from '../middlewares/upload.middleware';
 import path from 'path';
 import fs from 'fs';
+import prisma from '../lib/prisma';
 
-const prisma = new PrismaClient();
 
 // Obtener documentos de un empleado
 export const getDocumentosEmpleado = async (req: Request, res: Response) => {
@@ -32,8 +31,15 @@ export const getDocumentosEmpleado = async (req: Request, res: Response) => {
 // Subir documento
 export const uploadDocumento = async (req: Request, res: Response) => {
   try {
-    const { empleadoId } = req.params;
+    const empleadoId = req.params.empleadoId;
     const { tipoArchivo } = req.body;
+
+    if (!empleadoId) {
+      return res.status(400).json({
+        success: false,
+        message: 'empleadoId es requerido'
+      });
+    }
 
     if (!req.file) {
       return res.status(400).json({

@@ -91,24 +91,39 @@ model Tarea {
   titulo           String
   descripcion      String?
   responsableId    Int?
-  estado           String
-  prioridad        String
+  estado           String          @default("pendiente")
+  prioridad        String          @default("media")
+  categoria        String          @default("infraestructura")
+  origen           String          @default("interno")
+  impacto          String          @default("individual")
   tipo             String
   periodo          String
   repeticion       String
   intervalo        Int?
   diaDelMes        String?
   fechaVencimiento DateTime?
+  fechaCierre      DateTime?
+  observaciones    String?
+  solicitante      String?
+  activoRelacionado String?
   creadaPorId      Int
   creadaEn         DateTime        @default(now())
+  actualizadaEn    DateTime        @updatedAt
   finalizadaEn     DateTime?
   procedimientoId  Int?
   categoriaId      Int?
   comentarios      Comentario[]
-  categoria        CategoriaTarea? @relation(fields: [categoriaId], references: [id])
+  categoriaRef     CategoriaTarea? @relation(fields: [categoriaId], references: [id])
   creadaPor        Usuario         @relation("CreadorTarea", fields: [creadaPorId], references: [id])
   procedimiento    Procedimiento?  @relation(fields: [procedimientoId], references: [id])
   responsable      Usuario?        @relation("Tarea_responsable", fields: [responsableId], references: [id])
+
+  @@index([estado])
+  @@index([prioridad])
+  @@index([categoria])
+  @@index([responsableId])
+  @@index([fechaVencimiento])
+  @@index([fechaCierre])
 }
 
 model Comentario {

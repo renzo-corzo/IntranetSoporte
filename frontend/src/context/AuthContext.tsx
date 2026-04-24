@@ -1,4 +1,5 @@
 import React, { createContext, useState, useEffect, useContext } from "react";
+import { buildApiUrl } from "../config/api";
 
 interface User {
   id: number;
@@ -34,7 +35,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (storedToken.trim() && parsedUser && parsedUser.id && parsedUser.email) {
           setToken(storedToken);
           // Refrescar datos de usuario (incluye permisos) desde /api/auth/me
-          fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:4001/api'}/auth/me`, {
+          fetch(buildApiUrl('/auth/me'), {
             headers: { Authorization: `Bearer ${storedToken}` }
           })
             .then(r => r.ok ? r.json() : null)
@@ -78,7 +79,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     localStorage.setItem("user", JSON.stringify(user));
     localStorage.setItem("token", token);
     // Recuperar permisos actualizados
-    fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:4001/api'}/auth/me`, {
+    fetch(buildApiUrl('/auth/me'), {
       headers: { Authorization: `Bearer ${token}` }
     })
       .then(r => r.ok ? r.json() : null)

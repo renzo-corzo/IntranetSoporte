@@ -1,7 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
-import { PrismaClient } from '@prisma/client';
+import prisma from '../lib/prisma';
 
-const prisma = new PrismaClient();
 
 // Middleware para verificar permisos de RRHH
 export const verificarPermisosRRHH = async (req: Request, res: Response, next: NextFunction) => {

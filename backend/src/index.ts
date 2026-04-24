@@ -3,7 +3,6 @@ import cors from 'cors';
 import morgan from 'morgan';
 import dotenv from 'dotenv';
 import path from 'path';
-import { PrismaClient } from '@prisma/client';
 
 // Import routes
 import authRoutes from './routes/auth.routes';
@@ -22,13 +21,19 @@ import uploadRoutes from './routes/upload.routes';
 import zabbixRoutes from './routes/zabbix.routes';
 import vacacionesRoutes from './routes/vacaciones.routes';
 import traficoRoutes from './routes/trafico.routes';
+import servidoresFisicosRoutes from './routes/servidores-fisicos.routes';
+import maquinasVirtualesRoutes from './routes/maquinas-virtuales.routes';
+import equiposRedRoutes from './routes/equipos-red.routes';
+import equiposUsuarioRoutes from './routes/equipos-usuario.routes';
+import serviciosRoutes from './routes/servicios.routes';
+import cmdbDashboardRoutes from './routes/cmdb-dashboard.routes';
+import prisma from './lib/prisma';
 
 // Load environment variables
 dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 4001;
-const prisma = new PrismaClient();
 
 // Middleware
 app.use(cors());
@@ -64,6 +69,12 @@ app.use('/api/upload', uploadRoutes);
 app.use('/api/zabbix', zabbixRoutes);
 app.use('/api/vacaciones', vacacionesRoutes);
 app.use('/api/trafico', traficoRoutes);
+app.use('/api/servidores-fisicos', servidoresFisicosRoutes);
+app.use('/api/maquinas-virtuales', maquinasVirtualesRoutes);
+app.use('/api/equipos-red', equiposRedRoutes);
+app.use('/api/equipos-usuario', equiposUsuarioRoutes);
+app.use('/api/servicios', serviciosRoutes);
+app.use('/api/cmdb', cmdbDashboardRoutes);
 
 // 404 handler
 app.use('*', (req, res) => {

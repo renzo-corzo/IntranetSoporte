@@ -31,7 +31,11 @@ export default function Login() {
         setMensaje(data.message || "Error en el login");
       }
     } catch (err) {
-      setMensaje("Error de conexión con el backend");
+      setMensaje(
+        import.meta.env.DEV
+          ? "No se pudo conectar con el backend. ¿Está en ejecución? (ej. ejecuta start-dev.bat)"
+          : "Error de conexión con el servidor. Comprueba la red o contacta al administrador."
+      );
     }
     setLoading(false);
   };

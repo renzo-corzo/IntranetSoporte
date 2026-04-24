@@ -14,6 +14,12 @@ const TareaForm: React.FC<TareaFormProps> = ({ onSubmit, onCancel, initial, usua
     responsableId: initial?.responsableId || "",
     estado: initial?.estado || "pendiente",
     prioridad: initial?.prioridad || "media",
+    categoria: initial?.categoria || "infraestructura",
+    origen: initial?.origen || "interno",
+    impacto: initial?.impacto || "individual",
+    solicitante: initial?.solicitante || "",
+    activoRelacionado: initial?.activoRelacionado || "",
+    observaciones: initial?.observaciones || "",
     tipo: initial?.tipo || "rutinaria",
     esRepetitiva: initial?.periodo ? true : false,
     periodo: initial?.periodo || "",
@@ -124,6 +130,22 @@ const TareaForm: React.FC<TareaFormProps> = ({ onSubmit, onCancel, initial, usua
                   </select>
                 </div>
 
+                <div>
+                  <label className="form-label">Categoría</label>
+                  <select name="categoria" value={form.categoria} onChange={handleChange} className="form-select">
+                    <option value="infraestructura">Infraestructura</option>
+                    <option value="redes">Redes</option>
+                    <option value="servidores">Servidores</option>
+                    <option value="seguridad">Seguridad</option>
+                    <option value="usuarios">Usuarios</option>
+                    <option value="software">Software</option>
+                    <option value="proyectos">Proyectos</option>
+                    <option value="mantenimiento">Mantenimiento</option>
+                    <option value="proveedores">Proveedores</option>
+                    <option value="monitoreo">Monitoreo</option>
+                  </select>
+                </div>
+
 
               </div>
 
@@ -226,6 +248,28 @@ const TareaForm: React.FC<TareaFormProps> = ({ onSubmit, onCancel, initial, usua
                   </select>
                 </div>
 
+                <div>
+                  <label className="form-label">Origen</label>
+                  <select name="origen" value={form.origen} onChange={handleChange} className="form-select">
+                    <option value="interno">Interno</option>
+                    <option value="usuario">Usuario</option>
+                    <option value="proveedor">Proveedor</option>
+                    <option value="monitoreo">Monitoreo</option>
+                    <option value="auditoria">Auditoría</option>
+                    <option value="proyecto">Proyecto</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="form-label">Impacto</label>
+                  <select name="impacto" value={form.impacto} onChange={handleChange} className="form-select">
+                    <option value="individual">Individual</option>
+                    <option value="area">Área</option>
+                    <option value="institucional">Institucional</option>
+                    <option value="critico">Crítico</option>
+                  </select>
+                </div>
+
                 {/* Estado y Prioridad en la misma fila */}
                 <div className="grid grid-cols-2 gap-3">
                   <div>
@@ -237,9 +281,11 @@ const TareaForm: React.FC<TareaFormProps> = ({ onSubmit, onCancel, initial, usua
                     </label>
                     <select name="estado" value={form.estado} onChange={handleChange} className="form-select">
                       <option value="pendiente">⏳ Pendiente</option>
-                      <option value="en_progreso">🔄 En progreso</option>
-                      <option value="hecha">✅ Completada</option>
+                      <option value="en_curso">🔄 En curso</option>
                       <option value="bloqueada">🚫 Bloqueada</option>
+                      <option value="en_espera">⏸️ En espera</option>
+                      <option value="resuelta">✅ Resuelta</option>
+                      <option value="cancelada">🗑️ Cancelada</option>
                     </select>
                   </div>
 
@@ -254,8 +300,43 @@ const TareaForm: React.FC<TareaFormProps> = ({ onSubmit, onCancel, initial, usua
                       <option value="baja">🟢 Baja</option>
                       <option value="media">🟡 Media</option>
                       <option value="alta">🔴 Alta</option>
+                      <option value="critica">🚨 Crítica</option>
                     </select>
                   </div>
+                </div>
+
+                <div>
+                  <label className="form-label">Solicitante</label>
+                  <input
+                    name="solicitante"
+                    value={form.solicitante}
+                    onChange={handleChange}
+                    className="form-input"
+                    placeholder="Nombre o área solicitante"
+                  />
+                </div>
+
+                <div>
+                  <label className="form-label">Activo relacionado</label>
+                  <input
+                    name="activoRelacionado"
+                    value={form.activoRelacionado}
+                    onChange={handleChange}
+                    className="form-input"
+                    placeholder="Servidor, equipo, servicio, etc."
+                  />
+                </div>
+
+                <div>
+                  <label className="form-label">Observaciones</label>
+                  <textarea
+                    name="observaciones"
+                    value={form.observaciones}
+                    onChange={handleChange}
+                    className="form-input min-h-[60px]"
+                    rows={2}
+                    placeholder="Notas operativas internas"
+                  />
                 </div>
               </div>
 

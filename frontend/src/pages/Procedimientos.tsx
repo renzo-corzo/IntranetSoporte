@@ -95,46 +95,90 @@ const Procedimientos: React.FC = () => {
 
   const fetchCategorias = async () => {
     try {
-
-      const data = await getCategorias(token || "");
-
-      setCategorias(data);
-    } catch (err) {
-
+      console.log("Fetching categorías...");
+      const data = await getCategorias();
+      console.log(`Categorías obtenidas: ${data?.length || 0}`);
+      setCategorias(data || []);
+    } catch (err: any) {
+      console.error("Error al cargar categorías:", err);
+      console.error("Detalles:", err.response?.data || err.message);
+      if (err.response?.status === 403 || err.response?.status === 401) {
+        const message = "Error de autenticación. Por favor, cierra sesión y vuelve a iniciar sesión.";
+        console.error(message);
+        alert(message);
+      } else {
+        const errorMsg = `Error al cargar categorías: ${err.response?.data?.error || err.message || "Error desconocido"}`;
+        console.error(errorMsg);
+        alert(errorMsg);
+      }
+      setCategorias([]);
     }
   };
 
   const fetchArticulos = async (categoriaId?: number) => {
     try {
-      const data = await getArticulos(token || "", categoriaId);
-
-
-      setArticulos(data);
-    } catch (err) {
-
+      console.log(`Fetching artículos${categoriaId ? ` para categoría ${categoriaId}` : ' (todos)'}...`);
+      const data = await getArticulos(undefined, categoriaId);
+      console.log(`Artículos obtenidos: ${data?.length || 0}`);
+      setArticulos(data || []);
+    } catch (err: any) {
+      console.error("Error al cargar artículos:", err);
+      console.error("Detalles:", err.response?.data || err.message);
+      if (err.response?.status === 403 || err.response?.status === 401) {
+        console.error("Error de autenticación al cargar artículos");
+      }
+      setArticulos([]);
     }
   };
 
   const fetchArticuloById = async (id: number) => {
     try {
-      const data = await getArticuloById(id, token || "");
+      const data = await getArticuloById(id);
       setSelectedArticulo(data);
-    } catch (err) {
-
+    } catch (err: any) {
+      console.error("Error al cargar artículo:", err);
+      console.error("Detalles:", err.response?.data || err.message);
+      if (err.response?.status === 403 || err.response?.status === 401) {
+        alert("Error de autenticación. Por favor, cierra sesión y vuelve a iniciar sesión.");
+      } else {
+        alert(`Error al cargar artículo: ${err.response?.data?.error || err.message || "Error desconocido"}`);
+      }
     }
   };
 
   useEffect(() => {
     const initializeData = async () => {
+      // Verificar token en localStorage también
+      const storedToken = localStorage.getItem('token');
+      if (!token && !storedToken) {
+        console.error("No hay token de autenticación");
+        alert("No estás autenticado. Por favor, cierra sesión y vuelve a iniciar sesión.");
+        setLoading(false);
+        return;
+      }
+      
       setLoading(true);
-      await Promise.all([
-        fetchCategorias(),
-        fetchArticulos()
-      ]);
-      setLoading(false);
+      try {
+        console.log("Inicializando datos de procedimientos...");
+        const results = await Promise.allSettled([
+          fetchCategorias(),
+          fetchArticulos()
+        ]);
+        
+        // Verificar resultados
+        results.forEach((result, index) => {
+          if (result.status === 'rejected') {
+            console.error(`Error en inicialización ${index === 0 ? 'categorías' : 'artículos'}:`, result.reason);
+          }
+        });
+      } catch (err) {
+        console.error("Error al inicializar datos:", err);
+      } finally {
+        setLoading(false);
+      }
     };
     initializeData();
-  }, []);
+  }, [token]);
 
   // Handlers para categorías
   const handleSelectCategoria = (categoria: Categoria) => {
@@ -151,7 +195,7 @@ const Procedimientos: React.FC = () => {
   const handleDeleteCategoria = async (categoria: Categoria) => {
     try {
       // Primero intentar eliminación normal
-      await deleteCategoria(categoria.id, token || "");
+      await deleteCategoria(categoria.id);
       await fetchCategorias();
       alert("Categoría eliminada exitosamente");
       if (selectedCategoria?.id === categoria.id) {
@@ -236,9 +280,9 @@ const Procedimientos: React.FC = () => {
   const handleSubmitCategoria = async (categoriaData: any) => {
     try {
       if (editCategoria) {
-        await updateCategoria(editCategoria.id, categoriaData, token || "");
+        await updateCategoria(editCategoria.id, categoriaData);
       } else {
-        await createCategoria(categoriaData, token || "");
+        await createCategoria(categoriaData);
       }
       setShowCategoriaForm(false);
       setEditCategoria(null);
@@ -262,7 +306,7 @@ const Procedimientos: React.FC = () => {
     if (!window.confirm(`¿Eliminar el artículo "${articulo.titulo}"?`)) return;
     
     try {
-      await deleteArticulo(articulo.id, token || "");
+      await deleteArticulo(articulo.id);
       await fetchArticulos(selectedCategoria?.id);
       if (selectedArticulo?.id === articulo.id) {
         setSelectedArticulo(null);
@@ -282,9 +326,9 @@ const Procedimientos: React.FC = () => {
 
       
       if (editArticulo) {
-        await updateArticulo(editArticulo.id, articuloData, token || "");
+        await updateArticulo(editArticulo.id, articuloData);
       } else {
-        await createArticulo(articuloData, token || "");
+        await createArticulo(articuloData);
       }
       setShowArticuloForm(false);
       setEditArticulo(null);
@@ -337,7 +381,7 @@ const Procedimientos: React.FC = () => {
 
       // Si no hay resultados locales, buscar en todos los artículos
       if (articulosEncontrados.length === 0) {
-        const todosLosArticulos = await getArticulos(token || "");
+        const todosLosArticulos = await getArticulos();
         const articulosGlobales = todosLosArticulos.filter((articulo: any) =>
           articulo.titulo.toLowerCase().includes(searchLower) ||
           articulo.contenido.toLowerCase().includes(searchLower)

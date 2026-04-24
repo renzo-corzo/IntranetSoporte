@@ -1,7 +1,6 @@
 import { Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
+import prisma from '../lib/prisma';
 
-const prisma = new PrismaClient();
 
 // Listar todos los empleados
 export const listarEmpleados = async (req: Request, res: Response) => {
@@ -87,7 +86,7 @@ export const crearEmpleado = async (req: Request, res: Response) => {
         nombre,
         departamento,
         estado
-      }
+      } as any
     });
 
     res.status(201).json({

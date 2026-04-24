@@ -1,7 +1,6 @@
 import { Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
+import prisma from '../lib/prisma';
 
-const prisma = new PrismaClient();
 
 // Obtener todas las máquinas virtuales
 export const obtenerMaquinasVirtuales = async (req: Request, res: Response) => {

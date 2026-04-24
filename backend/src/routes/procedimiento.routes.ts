@@ -6,11 +6,11 @@ import {
   updateProcedimiento,
   deleteProcedimiento
 } from "../controllers/procedimiento.controller";
-import { authenticate } from "../middlewares/auth";
+import { verifyToken } from "../middlewares/auth.middleware";
 
 const router = Router();
 
-router.use(authenticate);
+router.use(verifyToken);
 
 router.get("/", getProcedimientos);
 router.get("/:id", getProcedimientoById);

@@ -45,6 +45,8 @@ const MovimientoForm: React.FC<MovimientoFormProps> = ({
   const [ubicaciones, setUbicaciones] = useState<UbicacionStock[]>([]);
   const [productos, setProductos] = useState<ProductoStock[]>([]);
   const [empleados, setEmpleados] = useState<any[]>([]);
+  /** Si falla GET /empleados (p. ej. 403), no bloquea productos/tipos/ubicaciones */
+  const [empleadosCargaFallida, setEmpleadosCargaFallida] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [showModalUbicacion, setShowModalUbicacion] = useState(false);
@@ -68,30 +70,45 @@ const MovimientoForm: React.FC<MovimientoFormProps> = ({
         entregadoA: ''
       });
       setErrors({});
+      setEmpleadosCargaFallida(false);
     }
   }, [isOpen]);
 
   const cargarDatosIniciales = async () => {
+    setEmpleadosCargaFallida(false);
+
+    // Stock: tipos, ubicaciones y (opcional) productos — sin mezclar con empleados
     try {
-      const peticiones: Promise<any>[] = [
+      const peticionesStock: Promise<any>[] = [
         obtenerTiposMovimiento(),
-        obtenerUbicaciones(),
-        empleadosService.getEmpleados({ estado: 'ACTIVO' })
+        obtenerUbicaciones()
       ];
-      // Si no viene producto preseleccionado, cargamos listado para el select
       if (!producto) {
-        peticiones.push(obtenerProductos({ limit: 100 } as any));
+        peticionesStock.push(obtenerProductos({ limit: 100 } as any));
       }
 
-      const resultados = await Promise.all(peticiones as any);
-      setTiposMovimiento(resultados[0]);
-      setUbicaciones(resultados[1]);
-      setEmpleados(resultados[2]?.data || []);
-      if (!producto && resultados[3]) {
-        setProductos(resultados[3].productos || []);
+      const resStock = await Promise.all(peticionesStock);
+      setTiposMovimiento(resStock[0]);
+      setUbicaciones(resStock[1]);
+      if (!producto) {
+        setProductos(resStock[2]?.productos || []);
       }
     } catch (error) {
-      console.error('Error al cargar datos iniciales:', error);
+      console.error('Error al cargar tipos/ubicaciones/productos de stock:', error);
+    }
+
+    // Empleados: permisos distintos (RRHH); un 403 no debe vaciar el resto del formulario
+    try {
+      const res = await empleadosService.getEmpleados({ estado: 'ACTIVO' });
+      setEmpleados(res?.data || []);
+      setEmpleadosCargaFallida(false);
+    } catch (error) {
+      setEmpleados([]);
+      setEmpleadosCargaFallida(true);
+      console.warn(
+        'MovimientoForm: lista de empleados no disponible (p. ej. sin permiso). Productos y stock siguen cargados.',
+        error
+      );
     }
   };
 
@@ -386,9 +403,12 @@ const MovimientoForm: React.FC<MovimientoFormProps> = ({
                 name="entregadoA"
                 value={formData.entregadoA}
                 onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                disabled={empleadosCargaFallida}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:text-gray-500"
               >
-                <option value="">Seleccionar empleado</option>
+                <option value="">
+                  {empleadosCargaFallida ? 'Lista no disponible' : 'Seleccionar empleado'}
+                </option>
                 {empleados.map(empleado => (
                   <option key={empleado.id} value={`${empleado.nombre} ${empleado.apellido}`}>
                     {empleado.nombre} {empleado.apellido} - {empleado.departamento}
@@ -398,6 +418,11 @@ const MovimientoForm: React.FC<MovimientoFormProps> = ({
               <p className="mt-1 text-xs text-gray-500">
                 Empleado que recibe el producto
               </p>
+              {empleadosCargaFallida && (
+                <p className="mt-1 text-xs text-amber-700">
+                  No se pudo cargar el listado desde RRHH. Podés completar motivo u observaciones con el nombre o gestionar permisos más adelante.
+                </p>
+              )}
             </div>
           </div>
 

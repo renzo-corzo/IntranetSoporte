@@ -1,8 +1,7 @@
 import { Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
 import { recalcularDiasDisponibles } from './empleados.controller';
+import prisma from '../lib/prisma';
 
-const prisma = new PrismaClient();
 
 // Función helper para calcular días hábiles (sin fines de semana)
 const calcularDiasHabiles = (fechaInicio: Date, fechaFin: Date): number => {

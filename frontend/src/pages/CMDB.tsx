@@ -1,10 +1,13 @@
 import React, { useState } from 'react';
-import { ServerIcon, CpuChipIcon, WifiIcon, ComputerDesktopIcon, CogIcon } from '@heroicons/react/24/outline';
+import { ServerIcon, CpuChipIcon, WifiIcon, ComputerDesktopIcon, CogIcon, ChartBarIcon, MagnifyingGlassIcon, ArrowPathIcon } from '@heroicons/react/24/outline';
 import ServidoresFisicos from '../components/cmdb/ServidoresFisicos';
 import MaquinasVirtuales from '../components/cmdb/MaquinasVirtuales';
 import EquiposRed from '../components/cmdb/EquiposRed';
 import EquiposUsuario from '../components/cmdb/EquiposUsuario';
 import Servicios from '../components/cmdb/Servicios';
+import CMDBDashboard from '../components/cmdb/CMDBDashboard';
+import BusquedaGlobal from '../components/cmdb/BusquedaGlobal';
+import ZabbixSync from '../components/cmdb/ZabbixSync';
 import { useAuth } from '../context/AuthContext';
 
 const CMDB: React.FC = () => {
@@ -12,7 +15,7 @@ const CMDB: React.FC = () => {
   const hasPerm = (perm: string) => (user?.permisos || []).includes(perm) || user?.rol === 'admin';
   const canRead = hasPerm('cmdb:read') || hasPerm('cmdb:manage');
   
-  const [activeTab, setActiveTab] = useState<'servidores' | 'vms' | 'red' | 'usuario' | 'servicios'>('servidores');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'busqueda' | 'zabbix' | 'servidores' | 'vms' | 'red' | 'usuario' | 'servicios'>('dashboard');
 
   if (!canRead) {
     return (
@@ -26,6 +29,9 @@ const CMDB: React.FC = () => {
   }
 
   const tabs = [
+    { id: 'dashboard', label: 'Dashboard', icon: ChartBarIcon },
+    { id: 'busqueda', label: 'Búsqueda Global', icon: MagnifyingGlassIcon },
+    { id: 'zabbix', label: 'Sincronización Zabbix', icon: ArrowPathIcon },
     { id: 'servidores', label: 'Servidores Físicos', icon: ServerIcon },
     { id: 'vms', label: 'Máquinas Virtuales', icon: CpuChipIcon },
     { id: 'red', label: 'Equipos de Red', icon: WifiIcon },
@@ -80,6 +86,9 @@ const CMDB: React.FC = () => {
 
       {/* Content */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+        {activeTab === 'dashboard' && <CMDBDashboard />}
+        {activeTab === 'busqueda' && <BusquedaGlobal />}
+        {activeTab === 'zabbix' && <ZabbixSync />}
         {activeTab === 'servidores' && <ServidoresFisicos />}
         {activeTab === 'vms' && <MaquinasVirtuales />}
         {activeTab === 'red' && <EquiposRed />}

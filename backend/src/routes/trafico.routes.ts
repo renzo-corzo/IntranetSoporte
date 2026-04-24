@@ -30,7 +30,8 @@ router.get('/test', (req, res) => {
 router.get('/interfaces/:ifid/stats', requirePermission('ver_monitor'), async (req, res) => {
   try {
     console.log('📊 Ruta /interfaces/:ifid/stats llamada, ifid:', req.params.ifid);
-    const ifid = parseInt(req.params.ifid) || 0;
+    const ifidParam = req.params.ifid;
+    const ifid = ifidParam ? parseInt(ifidParam, 10) || 0 : 0;
     console.log('📊 Obteniendo estadísticas para ifid:', ifid);
     const stats = await getInterfaceStats(ifid);
     console.log('📊 Estadísticas obtenidas:', stats ? 'OK' : 'NULL');
@@ -120,6 +121,9 @@ router.get('/hosts/active', requirePermission('ver_monitor'), async (req, res) =
 router.get('/hosts/:hostIp/stats', requirePermission('ver_monitor'), async (req, res) => {
   try {
     const hostIp = req.params.hostIp;
+    if (!hostIp) {
+      return res.status(400).json({ error: 'Host IP requerida' });
+    }
     const vlanId = parseInt(req.query.vlan as string) || 0;
     
     const stats = await getHostStats(hostIp, vlanId);

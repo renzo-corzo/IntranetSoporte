@@ -83,7 +83,7 @@ const TareaList: React.FC<TareaListProps> = ({ tareas, onSelect, onEdit, onDelet
               <div className="flex items-center gap-3 flex-1 min-w-0">
                 <input
                   type="checkbox"
-                  checked={t.estado === "hecha"}
+                  checked={t.estado === "resuelta" || t.estado === "hecha"}
                   onChange={e => { e.stopPropagation(); onToggleCheck(t, e.target.checked); }}
                   className="w-4 h-4 text-green-600 bg-gray-100 border-2 border-gray-300 rounded focus:ring-green-500 focus:ring-2"
                   title="Marcar como completada"
@@ -105,14 +105,18 @@ const TareaList: React.FC<TareaListProps> = ({ tareas, onSelect, onEdit, onDelet
                 {/* Estado */}
                 <span className={`inline-flex items-center px-2 py-1 rounded-md text-xs font-medium ${
                   t.estado === "pendiente" ? "bg-yellow-100 text-yellow-700" :
-                  t.estado === "en_progreso" ? "bg-blue-100 text-blue-700" :
-                  t.estado === "hecha" ? "bg-green-100 text-green-700" :
-                  t.estado === "bloqueada" ? "bg-red-100 text-red-700" : "bg-gray-100 text-gray-700"
+                  t.estado === "en_curso" || t.estado === "en_progreso" ? "bg-blue-100 text-blue-700" :
+                  t.estado === "resuelta" || t.estado === "hecha" ? "bg-green-100 text-green-700" :
+                  t.estado === "bloqueada" ? "bg-red-100 text-red-700" :
+                  t.estado === "en_espera" ? "bg-indigo-100 text-indigo-700" :
+                  t.estado === "cancelada" ? "bg-gray-200 text-gray-700" : "bg-gray-100 text-gray-700"
                 }`}>
                   {t.estado === "pendiente" ? "⏳" :
-                   t.estado === "en_progreso" ? "🔄" :
-                   t.estado === "hecha" ? "✅" :
-                   t.estado === "bloqueada" ? "🚫" : "📋"} {t.estado}
+                   t.estado === "en_curso" || t.estado === "en_progreso" ? "🔄" :
+                   t.estado === "resuelta" || t.estado === "hecha" ? "✅" :
+                   t.estado === "bloqueada" ? "🚫" :
+                   t.estado === "en_espera" ? "⏸️" :
+                   t.estado === "cancelada" ? "🗑️" : "📋"} {t.estado === "hecha" ? "resuelta" : t.estado}
                 </span>
 
                 {/* Prioridad */}

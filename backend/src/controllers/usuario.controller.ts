@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
-const prisma = new PrismaClient();
+import prisma from '../lib/prisma';
 
 // Lista optimizada para RRHH: id, nombreCompleto, departamento
 export const getUsuariosConDepartamento = async (req: Request, res: Response) => {

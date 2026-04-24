@@ -35,7 +35,10 @@ async function ntopngLogin(): Promise<string | null> {
     // Extraer cookie de la respuesta
     const setCookieHeader = response.headers['set-cookie'];
     if (setCookieHeader && setCookieHeader.length > 0) {
-      sessionCookie = setCookieHeader[0].split(';')[0];
+      const firstCookie = setCookieHeader[0];
+      if (firstCookie) {
+        sessionCookie = firstCookie.split(';')[0] || null;
+      }
       console.log('✅ ntopng: Sesión iniciada correctamente');
       return sessionCookie;
     }

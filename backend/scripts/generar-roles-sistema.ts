@@ -82,7 +82,8 @@ const rolesSistema = [
       'stock:create',
       'stock:update',
       'stock:delete',
-      'ver_stock'
+      'ver_stock',
+      'empleados:read'
     ]
   },
   {

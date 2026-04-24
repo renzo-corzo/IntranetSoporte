@@ -1,13 +1,15 @@
 import { Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
+import prisma from '../lib/prisma';
 
-const prisma = new PrismaClient();
 
 // Función helper para convertir fecha YYYY-MM-DD a Date sin problemas de zona horaria
 const parseDateString = (dateString: string): Date => {
   // Si la fecha viene como YYYY-MM-DD, la parseamos manualmente
   // para evitar problemas de zona horaria
-  const [year, month, day] = dateString.split('-').map(Number);
+  const [yearRaw, monthRaw, dayRaw] = dateString.split('-').map(Number);
+  const year = Number.isFinite(yearRaw) ? (yearRaw as number) : 1970;
+  const month = Number.isFinite(monthRaw) ? (monthRaw as number) : 1;
+  const day = Number.isFinite(dayRaw) ? (dayRaw as number) : 1;
   return new Date(year, month - 1, day); // month es 0-indexed en JavaScript
 };
 

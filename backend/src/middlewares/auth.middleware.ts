@@ -1,8 +1,12 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
-import { PrismaClient } from '@prisma/client';
+import prisma from '../lib/prisma';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'supersecreto';
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET) {
+  console.error('JWT_SECRET no está configurado. Configure la variable de entorno antes de iniciar el backend.');
+  throw new Error('JWT_SECRET no configurado');
+}
 
 export const verifyToken = (req: Request, res: Response, next: NextFunction) => {
   const authHeader = req.headers['authorization'];
@@ -13,8 +17,8 @@ export const verifyToken = (req: Request, res: Response, next: NextFunction) => 
   }
   jwt.verify(token, JWT_SECRET, (err, user) => {
     if (err) {
-      console.log('❌ verifyToken: Token inválido', req.path, err.message);
-      return res.status(403).json({ message: 'Token inválido', error: err.message });
+      console.log('❌ verifyToken: Token inválido', req.path);
+      return res.status(403).json({ message: 'Token inválido' });
     }
     console.log('✅ verifyToken: Token válido', req.path, 'user:', (user as any)?.id);
     (req as any).user = user;
@@ -37,37 +41,66 @@ export const requireRole = (roles: string | string[]) => (req: Request, res: Res
 }; 
 
 // Middleware basado en permisos del rol guardados en BD (Rol.permisos)
-export const requirePermission = (permissions: string | string[]) => {
+const normalizePermissions = (permissions: string | string[]) =>
+  Array.isArray(permissions) ? permissions : [permissions];
+
+export const requireAnyPermission = (permissions: string | string[]) => {
   return async (req: Request, res: Response, next: NextFunction) => {
-    const prisma = new PrismaClient();
     try {
       const user = (req as any).user;
       if (!user) {
-        await prisma.$disconnect();
-        console.log('❌ requirePermission: No autenticado', req.path);
+          console.log('❌ requirePermission: No autenticado', req.path);
         return res.status(401).json({ message: 'No autenticado' });
       }
       const usuario = await prisma.usuario.findUnique({ where: { id: user.id }, include: { rol: true } });
       if (!usuario) {
-        await prisma.$disconnect();
-        console.log('❌ requirePermission: Usuario no encontrado', req.path, user.id);
+          console.log('❌ requirePermission: Usuario no encontrado', req.path, user.id);
         return res.status(404).json({ message: 'Usuario no encontrado' });
       }
-      const wanted = Array.isArray(permissions) ? permissions : [permissions];
+      const wanted = normalizePermissions(permissions);
       const rolPerms: string[] = (usuario.rol as any)?.permisos || [];
-      const ok = wanted.every(p => rolPerms.includes(p));
+      const ok = wanted.some(p => rolPerms.includes(p));
       if (!ok) {
-        await prisma.$disconnect();
-        console.log('❌ requirePermission: Permiso denegado', req.path, 'required:', wanted, 'tiene:', rolPerms);
-        return res.status(403).json({ message: 'Permiso denegado', required: wanted, rolPerms });
+          console.log('❌ requirePermission: Permiso denegado', req.path, 'required:', wanted);
+        return res.status(403).json({ message: 'Permiso denegado', required: wanted });
       }
-      await prisma.$disconnect();
       console.log('✅ requirePermission: Permiso OK', req.path);
       next();
     } catch (e) {
-      await prisma.$disconnect();
       console.error('❌ Error al verificar permisos:', e, req.path);
-      return res.status(500).json({ message: 'Error al verificar permisos', error: (e as Error).message });
+      return res.status(500).json({ message: 'Error al verificar permisos' });
     }
   };
 };
+
+export const requireAllPermissions = (permissions: string | string[]) => {
+  return async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const user = (req as any).user;
+      if (!user) {
+          console.log('❌ requireAllPermissions: No autenticado', req.path);
+        return res.status(401).json({ message: 'No autenticado' });
+      }
+      const usuario = await prisma.usuario.findUnique({ where: { id: user.id }, include: { rol: true } });
+      if (!usuario) {
+          console.log('❌ requireAllPermissions: Usuario no encontrado', req.path, user.id);
+        return res.status(404).json({ message: 'Usuario no encontrado' });
+      }
+      const wanted = normalizePermissions(permissions);
+      const rolPerms: string[] = (usuario.rol as any)?.permisos || [];
+      const ok = wanted.every(p => rolPerms.includes(p));
+      if (!ok) {
+          console.log('❌ requireAllPermissions: Permiso denegado', req.path, 'required:', wanted);
+        return res.status(403).json({ message: 'Permiso denegado', required: wanted });
+      }
+      console.log('✅ requireAllPermissions: Permiso OK', req.path);
+      next();
+    } catch (e) {
+      console.error('❌ Error al verificar permisos (ALL):', e, req.path);
+      return res.status(500).json({ message: 'Error al verificar permisos' });
+    }
+  };
+};
+
+// Alias para mantener compatibilidad con rutas existentes.
+export const requirePermission = requireAnyPermission;
