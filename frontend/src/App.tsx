@@ -11,7 +11,6 @@ import Diagramas from "./pages/Diagramas";
 import Admin from "./pages/Admin";
 import Procedimientos from "./pages/Procedimientos";
 import Stock from "./pages/Stock";
-import Trafico from "./pages/Trafico";
 import MisVacaciones from "./pages/vacaciones/MisVacaciones";
 import VacacionesAdmin from "./pages/vacaciones/VacacionesAdmin";
 import VacacionesRRHH from "./pages/vacaciones/VacacionesRRHH_Final";
@@ -32,7 +31,6 @@ const App: React.FC = () => (
           <Route path="tareas" element={<Tareas />} />
           <Route path="procedimientos" element={<Procedimientos />} />
           <Route path="stock" element={<Stock />} />
-          <Route path="trafico" element={<Trafico />} />
           <Route path="vacaciones/mis" element={<MisVacaciones />} />
           <Route path="vacaciones/admin" element={<VacacionesAdmin />} />
           <Route path="vacaciones/rrhh" element={<VacacionesRRHH />} />
