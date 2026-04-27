@@ -13,6 +13,29 @@ SKIP_REMOTE_NPM="${SKIP_REMOTE_NPM:-}"
 
 echo "[remote] REMOTE_BASE=$REMOTE_BASE"
 
+# ── BACKUP AUTOMÁTICO DE BASE DE DATOS ──────────────────────────────────────
+echo "[remote] Creando backup de PostgreSQL..."
+BACKUP_DIR="${REMOTE_BASE}/backups"
+mkdir -p "$BACKUP_DIR"
+BACKUP_FILE="${BACKUP_DIR}/db_backup_$(date +%Y%m%d_%H%M%S).sql"
+
+ENV_FILE="${REMOTE_BASE}/backend/.env"
+DB_NAME=$(grep -E '^DATABASE_URL' "$ENV_FILE" | sed -E 's|.*\/([^?"]*).* |\1|' | tr -d '\r' || echo "infra_caja")
+
+if pg_dump -U postgres "$DB_NAME" > "$BACKUP_FILE" 2>/dev/null; then
+  gzip "$BACKUP_FILE"
+  echo "[remote] Backup DB: ${BACKUP_FILE}.gz"
+elif pg_dump -U intranet "$DB_NAME" > "$BACKUP_FILE" 2>/dev/null; then
+  gzip "$BACKUP_FILE"
+  echo "[remote] Backup DB: ${BACKUP_FILE}.gz"
+else
+  echo "[remote] ADVERTENCIA: No se pudo hacer backup de DB"
+  rm -f "$BACKUP_FILE"
+fi
+
+ls -t "${BACKUP_DIR}"/db_backup_*.sql.gz 2>/dev/null | tail -n +11 | xargs rm -f 2>/dev/null || true
+# ────────────────────────────────────────────────────────────────────────────
+
 cd "${REMOTE_BASE}/backend"
 
 if [ "$SKIP_REMOTE_NPM" = "1" ]; then

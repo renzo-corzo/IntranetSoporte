@@ -110,8 +110,11 @@ export const crearServidorFisico = async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'El nombre es obligatorio' });
     }
 
+    // Normalizar serie vacía a null
+    const serieNormalizada = serie && serie.trim() !== '' ? serie.trim() : null;
+
     // Verificar si la serie ya existe (si se proporciona)
-    if (serie) {
+    if (serieNormalizada) {
       const existeSerie = await prisma.servidorFisico.findUnique({
         where: { serie }
       });
@@ -185,10 +188,13 @@ export const actualizarServidorFisico = async (req: Request, res: Response) => {
       return res.status(404).json({ error: 'Servidor físico no encontrado' });
     }
 
+    // Normalizar serie vacía a null para evitar conflicto de unicidad
+    const serieNormalizada = serie && serie.trim() !== '' ? serie.trim() : null;
+
     // Si se cambia la serie, verificar que no exista otra con esa serie
-    if (serie && serie !== servidorExistente.serie) {
+    if (serieNormalizada && serieNormalizada !== servidorExistente.serie) {
       const existeSerie = await prisma.servidorFisico.findUnique({
-        where: { serie }
+        where: { serie: serieNormalizada }
       });
 
       if (existeSerie) {
@@ -203,7 +209,7 @@ export const actualizarServidorFisico = async (req: Request, res: Response) => {
         ip,
         rol,
         ubicacion,
-        serie,
+        serie: serieNormalizada,
         garantia: garantia ? new Date(garantia) : null,
         estado,
         fechaAlta: fechaAlta ? new Date(fechaAlta) : undefined,
