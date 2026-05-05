@@ -1,11 +1,17 @@
 import React, { useState } from "react";
 import RelevamientoTable from "../components/RelevamientoTable";
 import RelevamientoForm from "../components/RelevamientoForm";
-// import RelevamientoDetail from "../components/RelevamientoDetail";
+import ManualRelevamientosTable from "../components/ManualRelevamientosTable";
 
 const Relevamientos: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'zabbix' | 'manual'>('zabbix');
   const [showForm, setShowForm] = useState(false);
+  const [tableKey, setTableKey] = useState(0);
+
+  const handleFormSuccess = () => {
+    setShowForm(false);
+    setTableKey(k => k + 1);
+  };
 
   return (
     <div className="max-w-7xl mx-auto mt-4">
@@ -38,7 +44,7 @@ const Relevamientos: React.FC = () => {
             </div>
           </button>
           <button
-            onClick={() => setActiveTab('manual')}
+            onClick={() => { setActiveTab('manual'); setShowForm(false); }}
             className={`py-4 px-1 border-b-2 font-medium text-sm transition-all duration-200 ${
               activeTab === 'manual'
                 ? 'border-blue-500 text-blue-600 bg-blue-50'
@@ -53,7 +59,7 @@ const Relevamientos: React.FC = () => {
         </nav>
       </div>
 
-      {/* Contenido de las pestañas */}
+      {/* Contenido */}
       {activeTab === 'zabbix' ? (
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
           <div className="flex justify-between items-center mb-6">
@@ -61,13 +67,6 @@ const Relevamientos: React.FC = () => {
               <h2 className="text-2xl font-bold text-gray-900 mb-2">Estado de dispositivos Zabbix</h2>
               <p className="text-gray-600">Monitoreo en tiempo real de la infraestructura</p>
             </div>
-            <button
-              className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-6 py-3 rounded-lg font-semibold hover:from-blue-700 hover:to-indigo-700 transition-all duration-200 shadow-md hover:shadow-lg flex items-center space-x-2"
-              onClick={() => {/* Función para refrescar datos */}}
-            >
-              <span>🔄</span>
-              <span>Actualizar</span>
-            </button>
           </div>
           <RelevamientoTable />
         </div>
@@ -80,17 +79,20 @@ const Relevamientos: React.FC = () => {
             </div>
             <button
               className="bg-gradient-to-r from-green-600 to-emerald-600 text-white px-6 py-3 rounded-lg font-semibold hover:from-green-700 hover:to-emerald-700 transition-all duration-200 shadow-md hover:shadow-lg flex items-center space-x-2"
-              onClick={() => setShowForm(!showForm)}
+              onClick={() => setShowForm(f => !f)}
             >
               <span>{showForm ? "❌" : "➕"}</span>
               <span>{showForm ? "Cancelar" : "Nuevo relevamiento"}</span>
             </button>
           </div>
-          {showForm ? <RelevamientoForm /> : <RelevamientoTable />}
+          {showForm
+            ? <RelevamientoForm onSuccess={handleFormSuccess} />
+            : <ManualRelevamientosTable key={tableKey} />
+          }
         </div>
       )}
     </div>
   );
 };
 
-export default Relevamientos; 
+export default Relevamientos;

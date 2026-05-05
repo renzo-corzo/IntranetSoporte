@@ -1,12 +1,20 @@
 import { Request, Response } from "express";
-import { PrismaClient } from "@prisma/client";
 import prisma from '../lib/prisma';
 
+interface ItemInput {
+  tipo: string;
+  marca: string;
+  modelo: string;
+  serie: string;
+  estado: string;
+  observaciones?: string;
+}
 
-export const getRelevamientos = async (req: Request, res: Response) => {
+export const getRelevamientos = async (_req: Request, res: Response) => {
   try {
     const relevamientos = await prisma.relevamiento.findMany({
-      include: { items: true }
+      include: { items: true },
+      orderBy: { fecha: 'desc' }
     });
     res.json(relevamientos);
   } catch (error) {
@@ -30,7 +38,13 @@ export const getRelevamientoById = async (req: Request, res: Response) => {
 
 export const createRelevamiento = async (req: Request, res: Response) => {
   try {
-    const { fecha, responsable, ubicacion, observaciones, usuarioId, items } = req.body;
+    const { fecha, responsable, ubicacion, observaciones, items } = req.body;
+    const usuarioId = (req as any).user.id;
+
+    if (!fecha || !responsable || !ubicacion) {
+      return res.status(400).json({ error: "fecha, responsable y ubicacion son obligatorios" });
+    }
+
     const relevamiento = await prisma.relevamiento.create({
       data: {
         fecha: new Date(fecha),
@@ -39,7 +53,7 @@ export const createRelevamiento = async (req: Request, res: Response) => {
         observaciones,
         usuarioId,
         items: {
-          create: items
+          create: (items ?? []) as ItemInput[]
         }
       },
       include: { items: true }
@@ -54,26 +68,32 @@ export const updateRelevamiento = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const { fecha, responsable, ubicacion, observaciones, items } = req.body;
-    // Actualizar relevamiento
-    const relevamiento = await prisma.relevamiento.update({
-      where: { id: Number(id) },
-      data: {
-        fecha: fecha ? new Date(fecha) : undefined,
-        responsable,
-        ubicacion,
-        observaciones
+
+    const resultado = await prisma.$transaction(async (tx) => {
+      await tx.relevamiento.update({
+        where: { id: Number(id) },
+        data: {
+          fecha: fecha ? new Date(fecha) : undefined,
+          responsable,
+          ubicacion,
+          observaciones
+        }
+      });
+
+      if (items) {
+        await tx.item.deleteMany({ where: { relevamientoId: Number(id) } });
+        await tx.item.createMany({
+          data: (items as ItemInput[]).map(item => ({ ...item, relevamientoId: Number(id) }))
+        });
       }
+
+      return tx.relevamiento.findUnique({
+        where: { id: Number(id) },
+        include: { items: true }
+      });
     });
-    // Actualizar ítems (borrado y recreación simplificada)
-    if (items) {
-      await prisma.item.deleteMany({ where: { relevamientoId: Number(id) } });
-      await prisma.item.createMany({ data: items.map((item: any) => ({ ...item, relevamientoId: Number(id) })) });
-    }
-    const relevamientoActualizado = await prisma.relevamiento.findUnique({
-      where: { id: Number(id) },
-      include: { items: true }
-    });
-    res.json(relevamientoActualizado);
+
+    res.json(resultado);
   } catch (error) {
     res.status(500).json({ error: "Error al actualizar relevamiento" });
   }
@@ -82,10 +102,10 @@ export const updateRelevamiento = async (req: Request, res: Response) => {
 export const deleteRelevamiento = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    await prisma.item.deleteMany({ where: { relevamientoId: Number(id) } });
+    // onDelete: Cascade en el schema elimina los items automáticamente
     await prisma.relevamiento.delete({ where: { id: Number(id) } });
     res.json({ message: "Relevamiento eliminado" });
   } catch (error) {
     res.status(500).json({ error: "Error al eliminar relevamiento" });
   }
-}; 
+};

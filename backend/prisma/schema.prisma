@@ -61,7 +61,7 @@ model Item {
   estado         String
   observaciones  String?
   relevamientoId Int
-  relevamiento   Relevamiento @relation(fields: [relevamientoId], references: [id])
+  relevamiento   Relevamiento @relation(fields: [relevamientoId], references: [id], onDelete: Cascade)
 }
 
 model Procedimiento {
