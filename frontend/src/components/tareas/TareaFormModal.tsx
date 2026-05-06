@@ -203,7 +203,7 @@ const TareaFormModal: React.FC<Props> = ({
 
             <Field label="Origen">
               <select value={form.origen} onChange={e => set('origen', e.target.value)} style={inputStyle}>
-                {['interno','usuario','externo','monitoreo','otro'].map(o =>
+                {['interno','usuario','proveedor','monitoreo','auditoria','proyecto'].map(o =>
                   <option key={o} value={o}>{o.charAt(0).toUpperCase() + o.slice(1)}</option>
                 )}
               </select>
@@ -211,7 +211,7 @@ const TareaFormModal: React.FC<Props> = ({
 
             <Field label="Impacto">
               <select value={form.impacto} onChange={e => set('impacto', e.target.value)} style={inputStyle}>
-                {['individual','area','organización'].map(o =>
+                {['individual','area','institucional','critico'].map(o =>
                   <option key={o} value={o}>{o.charAt(0).toUpperCase() + o.slice(1)}</option>
                 )}
               </select>
