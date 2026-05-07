@@ -63,7 +63,7 @@ const EmpleadosList: React.FC<EmpleadosListProps> = ({ filtros }) => {
     email: '',
     departamento: '',
     fechaIngreso: '',
-    diasDisponibles: 20,
+    diasDisponibles: 0,
   });
 
   useEffect(() => {
@@ -100,7 +100,7 @@ const EmpleadosList: React.FC<EmpleadosListProps> = ({ filtros }) => {
       email: '',
       departamento: '',
       fechaIngreso: '',
-      diasDisponibles: 20,
+      diasDisponibles: 0,
     });
     setEmpleadoSeleccionado(null);
     setError(null);
