@@ -30,15 +30,19 @@ interface Articulo {
   titulo: string;
   contenido: string;
   categoriaId: number;
-  categoria?: {
-    nombre: string;
-  };
-  autor?: {
-    nombre: string;
-  };
-  createdAt: string;
-  updatedAt: string;
+  categoria?: { nombre: string };
+  autor?: { nombre: string };
+  creadoPor?: { nombre: string };
+  createdAt?: string;
+  updatedAt?: string;
+  creadoEn?: string;
   adjuntos?: string[];
+  codigo?: string;
+  version?: string;
+  area?: string;
+  responsable?: string;
+  estado?: string;
+  fechaRevision?: string;
 }
 
 const Procedimientos: React.FC = () => {
@@ -49,9 +53,6 @@ const Procedimientos: React.FC = () => {
   const [selectedArticulo, setSelectedArticulo] = useState<Articulo | null>(null);
   const [loading, setLoading] = useState(true);
   const [expandedCategories, setExpandedCategories] = useState<Set<number>>(new Set());
-  
-  // Evitar warnings de variables no usadas
-  console.log('Categorías expandidas:', expandedCategories, setExpandedCategories);
   
   // Estados para formularios
   const [showCategoriaForm, setShowCategoriaForm] = useState(false);
@@ -95,21 +96,12 @@ const Procedimientos: React.FC = () => {
 
   const fetchCategorias = async () => {
     try {
-      console.log("Fetching categorías...");
       const data = await getCategorias();
-      console.log(`Categorías obtenidas: ${data?.length || 0}`);
       setCategorias(data || []);
     } catch (err: any) {
       console.error("Error al cargar categorías:", err);
-      console.error("Detalles:", err.response?.data || err.message);
-      if (err.response?.status === 403 || err.response?.status === 401) {
-        const message = "Error de autenticación. Por favor, cierra sesión y vuelve a iniciar sesión.";
-        console.error(message);
-        alert(message);
-      } else {
-        const errorMsg = `Error al cargar categorías: ${err.response?.data?.error || err.message || "Error desconocido"}`;
-        console.error(errorMsg);
-        alert(errorMsg);
+      if (err.response?.status === 401 || err.response?.status === 403) {
+        alert("Error de autenticación. Por favor, cerrá sesión y volvé a iniciar sesión.");
       }
       setCategorias([]);
     }
@@ -117,16 +109,10 @@ const Procedimientos: React.FC = () => {
 
   const fetchArticulos = async (categoriaId?: number) => {
     try {
-      console.log(`Fetching artículos${categoriaId ? ` para categoría ${categoriaId}` : ' (todos)'}...`);
       const data = await getArticulos(undefined, categoriaId);
-      console.log(`Artículos obtenidos: ${data?.length || 0}`);
       setArticulos(data || []);
     } catch (err: any) {
       console.error("Error al cargar artículos:", err);
-      console.error("Detalles:", err.response?.data || err.message);
-      if (err.response?.status === 403 || err.response?.status === 401) {
-        console.error("Error de autenticación al cargar artículos");
-      }
       setArticulos([]);
     }
   };
@@ -137,45 +123,20 @@ const Procedimientos: React.FC = () => {
       setSelectedArticulo(data);
     } catch (err: any) {
       console.error("Error al cargar artículo:", err);
-      console.error("Detalles:", err.response?.data || err.message);
-      if (err.response?.status === 403 || err.response?.status === 401) {
-        alert("Error de autenticación. Por favor, cierra sesión y vuelve a iniciar sesión.");
-      } else {
-        alert(`Error al cargar artículo: ${err.response?.data?.error || err.message || "Error desconocido"}`);
-      }
+      alert(`Error al cargar artículo: ${err.response?.data?.error || err.message || "Error desconocido"}`);
     }
   };
 
   useEffect(() => {
     const initializeData = async () => {
-      // Verificar token en localStorage también
       const storedToken = localStorage.getItem('token');
       if (!token && !storedToken) {
-        console.error("No hay token de autenticación");
-        alert("No estás autenticado. Por favor, cierra sesión y vuelve a iniciar sesión.");
         setLoading(false);
         return;
       }
-      
       setLoading(true);
-      try {
-        console.log("Inicializando datos de procedimientos...");
-        const results = await Promise.allSettled([
-          fetchCategorias(),
-          fetchArticulos()
-        ]);
-        
-        // Verificar resultados
-        results.forEach((result, index) => {
-          if (result.status === 'rejected') {
-            console.error(`Error en inicialización ${index === 0 ? 'categorías' : 'artículos'}:`, result.reason);
-          }
-        });
-      } catch (err) {
-        console.error("Error al inicializar datos:", err);
-      } finally {
-        setLoading(false);
-      }
+      await Promise.allSettled([fetchCategorias(), fetchArticulos()]);
+      setLoading(false);
     };
     initializeData();
   }, [token]);
@@ -323,8 +284,6 @@ const Procedimientos: React.FC = () => {
 
   const handleSubmitArticulo = async (articuloData: any) => {
     try {
-
-      
       if (editArticulo) {
         await updateArticulo(editArticulo.id, articuloData);
       } else {
@@ -333,10 +292,8 @@ const Procedimientos: React.FC = () => {
       setShowArticuloForm(false);
       setEditArticulo(null);
       await fetchArticulos(selectedCategoria?.id);
-      alert("Artículo guardado exitosamente!");
     } catch (err: any) {
       console.error("Error al guardar artículo:", err);
-      console.error("Respuesta del servidor:", err.response?.data);
       alert(`Error al guardar artículo: ${err.response?.data?.error || err.message}`);
     }
   };
@@ -739,56 +696,54 @@ const Procedimientos: React.FC = () => {
                     </button>
                   </div>
                 ) : (
-                  articulos.map((articulo) => (
+                  articulos.map((articulo) => {
+                    const estadoBadge: Record<string, string> = {
+                      'Vigente':  'bg-green-900 text-green-300 border-green-700',
+                      'Borrador': 'bg-yellow-900 text-yellow-300 border-yellow-700',
+                      'Obsoleto': 'bg-red-900 text-red-300 border-red-700',
+                    };
+                    const badgeCls = estadoBadge[articulo.estado || 'Borrador'] || estadoBadge['Borrador'];
+                    return (
                     <div
                       key={articulo.id}
-                      className="bg-gray-800 border border-gray-700 rounded-lg p-6 cursor-pointer hover:bg-gray-700 transition-colors group"
+                      className="bg-gray-800 border border-gray-700 rounded-lg p-4 cursor-pointer hover:bg-gray-700 transition-colors group"
                       onClick={() => handleSelectArticulo(articulo)}
                     >
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <h3 className="text-lg font-semibold text-white mb-2">{articulo.titulo}</h3>
-                          <div
-                            className="text-gray-400 text-sm mb-3"
-                            dangerouslySetInnerHTML={{
-                              __html: processContent(articulo.contenido).substring(0, 150) + '...'
-                            }}
-                          />
-                          {articulo.adjuntos && articulo.adjuntos.length > 0 && (
-                            <div className="flex items-center space-x-2">
-                              <span className="text-xs text-gray-500">
-                                📎 {articulo.adjuntos.length} adjunto{articulo.adjuntos.length !== 1 ? 's' : ''}
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex-1 min-w-0">
+                          {/* Badges superiores */}
+                          <div className="flex flex-wrap items-center gap-2 mb-2">
+                            {articulo.codigo && (
+                              <span className="font-mono text-xs bg-gray-700 text-gray-300 px-2 py-0.5 rounded border border-gray-600">
+                                {articulo.codigo}
                               </span>
-                            </div>
-                          )}
+                            )}
+                            <span className={`text-xs font-medium px-2 py-0.5 rounded border ${badgeCls}`}>
+                              {articulo.estado || 'Borrador'}
+                            </span>
+                            {articulo.version && (
+                              <span className="text-xs text-gray-500">v{articulo.version}</span>
+                            )}
+                          </div>
+                          <h3 className="text-base font-semibold text-white mb-1 truncate">{articulo.titulo}</h3>
+                          {/* Info row */}
+                          <div className="flex flex-wrap gap-3 text-xs text-gray-400 mt-1">
+                            {articulo.area && <span>🏢 {articulo.area}</span>}
+                            {articulo.responsable && <span>👤 {articulo.responsable}</span>}
+                            {articulo.fechaRevision && (
+                              <span>🔄 {new Date(articulo.fechaRevision).toLocaleDateString('es-AR')}</span>
+                            )}
+                          </div>
                         </div>
-                        <div className="flex space-x-2 opacity-0 group-hover:opacity-100 transition-opacity ml-4">
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleEditArticulo(articulo);
-                            }}
-                            className="px-3 py-1 hover:bg-gray-600 rounded text-gray-400 hover:text-white text-xs flex items-center space-x-1"
-                            title="Editar artículo"
-                          >
-                            <span>✏️</span>
-                            <span>Editar</span>
-                          </button>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleDeleteArticulo(articulo);
-                            }}
-                            className="px-3 py-1 hover:bg-red-600 rounded text-gray-400 hover:text-white text-xs flex items-center space-x-1"
-                            title="Eliminar artículo"
-                          >
-                            <span>🗑️</span>
-                            <span>Eliminar</span>
-                          </button>
+                        <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                          <button onClick={e => { e.stopPropagation(); handleEditArticulo(articulo); }}
+                            className="px-2 py-1 hover:bg-gray-600 rounded text-gray-400 hover:text-white text-xs">✏️</button>
+                          <button onClick={e => { e.stopPropagation(); handleDeleteArticulo(articulo); }}
+                            className="px-2 py-1 hover:bg-red-700 rounded text-gray-400 hover:text-red-300 text-xs">🗑️</button>
                         </div>
                       </div>
                     </div>
-                  ))
+                  )})
                 )}
               </div>
             </div>

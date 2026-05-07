@@ -1,7 +1,7 @@
 import { Router } from "express";
 import {
   getCategorias, getCategoriaById, createCategoria, updateCategoria, deleteCategoria, cleanAndDeleteCategoria, deleteCategoriaWithArticles,
-  getArticulos, getArticuloById, createArticulo, updateArticulo, deleteArticulo
+  getArticulos, getArticuloById, createArticulo, updateArticulo, deleteArticulo, getNextCodigo
 } from "../controllers/kb.controller";
 import { verifyToken, requireRole } from "../middlewares/auth.middleware";
 
@@ -17,6 +17,7 @@ router.delete("/categorias/:id/clean", verifyToken, requireRole("admin"), cleanA
 router.delete("/categorias/:id/force", verifyToken, requireRole("admin"), deleteCategoriaWithArticles);
 
 // Artículos (Procedimientos)
+router.get("/articulos/next-codigo", verifyToken, getNextCodigo);
 router.get("/articulos", verifyToken, getArticulos);
 router.get("/articulos/:id", verifyToken, getArticuloById);
 router.post("/articulos", verifyToken, requireRole(["admin", "tecnico"]), createArticulo);

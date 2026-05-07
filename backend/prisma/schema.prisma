@@ -163,6 +163,12 @@ model Articulo {
   creadoPorId   Int
   creadoEn      DateTime  @default(now())
   actualizadoEn DateTime? @updatedAt
+  codigo        String?
+  version       String?   @default("1.0")
+  area          String?
+  responsable   String?
+  estado        String    @default("Borrador")
+  fechaRevision DateTime?
   categoria     Categoria @relation(fields: [categoriaId], references: [id])
   creadoPor     Usuario   @relation(fields: [creadoPorId], references: [id])
 }
