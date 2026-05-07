@@ -7,7 +7,6 @@ import Home from "./pages/Home";
 import Relevamientos from "./pages/Relevamientos";
 import Links from "./pages/Links";
 import Tareas from "./pages/Tareas";
-import Diagramas from "./pages/Diagramas";
 import Admin from "./pages/Admin";
 import Procedimientos from "./pages/Procedimientos";
 import Stock from "./pages/Stock";
@@ -35,7 +34,6 @@ const App: React.FC = () => (
           <Route path="vacaciones/admin" element={<VacacionesAdmin />} />
           <Route path="vacaciones/rrhh" element={<VacacionesRRHH />} />
           <Route path="rrhh" element={<DashboardRRHH />} />
-          <Route path="diagramas" element={<Diagramas />} />
           <Route path="admin" element={<Admin />} />
           <Route path="roles/permisos" element={<RolesPermisosPage />} />
           <Route path="cmdb" element={<CMDB />} />

@@ -7,7 +7,6 @@ import {
   LinkIcon,
   CubeIcon,
   CheckCircleIcon,
-  DeviceTabletIcon,
   Cog6ToothIcon,
   ClipboardDocumentCheckIcon,
   CalendarDaysIcon,
@@ -22,7 +21,6 @@ const navItems = [
   { to: "/dashboard/cmdb", label: "CMDB", icon: ServerIcon },
   { to: "/dashboard/tareas", label: "Tareas", icon: CheckCircleIcon },
   { to: "/dashboard/procedimientos", label: "Procedimientos", icon: ClipboardDocumentCheckIcon },
-  { to: "/dashboard/diagramas", label: "Diagramas", icon: DeviceTabletIcon },
   { to: "/dashboard/vacaciones/mis", label: "Vacaciones", icon: CalendarDaysIcon },
   { to: "/dashboard/admin", label: "Admin", icon: Cog6ToothIcon },
 ];
@@ -40,7 +38,6 @@ const Dashboard: React.FC = () => {
       "/dashboard/cmdb": ["cmdb:read", "cmdb:manage"],
       "/dashboard/tareas": null,
       "/dashboard/procedimientos": "ver_documentos",
-      "/dashboard/diagramas": "ver_documentos",
       "/dashboard/vacaciones/mis": "ver_vacaciones",
       "/dashboard/admin": "ver_roles",
     };
