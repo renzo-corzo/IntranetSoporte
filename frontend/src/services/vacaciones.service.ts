@@ -68,16 +68,8 @@ export const vacacionesService = {
     fechaFin: string;
     observaciones?: string;
   }) => {
-    try {
-      console.log('📤 Enviando petición POST a /vacaciones con datos:', vacacionData);
-      const response = await vacacionesApi.post('/', vacacionData);
-      console.log('✅ Respuesta del servidor:', response.data);
-      return response.data;
-    } catch (error: any) {
-      console.error('❌ Error en createVacacion:', error);
-      console.error('❌ Respuesta del error:', error.response?.data);
-      throw error;
-    }
+    const response = await vacacionesApi.post('/', vacacionData);
+    return response.data;
   },
 
   // Aprobar vacación

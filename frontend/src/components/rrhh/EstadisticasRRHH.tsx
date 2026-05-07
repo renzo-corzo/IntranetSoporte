@@ -93,7 +93,6 @@ const EstadisticasRRHH: React.FC = () => {
         vacaciones = vacacionesResponse;
       }
       
-      console.log('📊 Vacaciones recibidas:', vacaciones.length, vacaciones);
       
       const vacacionesPorEstado = vacaciones.reduce((acc: any, vacacion: any) => {
         acc[vacacion.estado] = (acc[vacacion.estado] || 0) + 1;
@@ -113,7 +112,6 @@ const EstadisticasRRHH: React.FC = () => {
         licencias = licenciasResponse;
       }
       
-      console.log('📊 Licencias recibidas:', licencias.length, licencias);
       
       const licenciasPorTipo = licencias.reduce((acc: any, licencia: any) => {
         acc[licencia.tipo] = (acc[licencia.tipo] || 0) + 1;

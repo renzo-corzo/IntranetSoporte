@@ -141,21 +141,7 @@ const LicenciasList: React.FC<LicenciasListProps> = ({ filtros }) => {
     try {
       setLoading(true);
       setError(null);
-      const response = await licenciasService.getLicencias({
-        fechaInicio: filtros.search ? '2024-01-01' : undefined,
-        fechaFin: filtros.search ? '2024-12-31' : undefined
-      });
-      
-      // Debug: verificar formato de fechas
-      console.log('Licencias cargadas:', response.data);
-      if (response.data && response.data.length > 0) {
-        console.log('Primera licencia fechas:', {
-          fechaInicio: response.data[0].fechaInicio,
-          fechaFin: response.data[0].fechaFin,
-          tipo: typeof response.data[0].fechaInicio
-        });
-      }
-      
+      const response = await licenciasService.getLicencias({});
       setLicencias(response.data || []);
     } catch (error: any) {
       console.error('Error al cargar licencias:', error);

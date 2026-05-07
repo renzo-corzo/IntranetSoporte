@@ -98,35 +98,13 @@ const VacacionesCalendarAdvanced: React.FC<VacacionesCalendarAdvancedProps> = ({
   const cargarVacaciones = async () => {
     try {
       setLoading(true);
-      
-      console.log('🔍 Cargando vacaciones...', {
-        departamento: filtros.departamento,
-        estado: filtros.estado
-      });
-      
-      // Cargar todas las vacaciones sin filtrar por mes
       const response = await vacacionesService.getVacaciones({
         departamento: filtros.departamento !== 'todos' ? filtros.departamento : undefined,
         estado: filtros.estado !== 'todos' ? filtros.estado : undefined
       });
-      
-      console.log('📦 Respuesta de vacaciones:', response);
-      console.log('🔍 Tipo de response:', typeof response);
-      console.log('🔍 response.data:', response.data);
-      console.log('🔍 Tipo de response.data:', typeof response.data);
-      console.log('🔍 Es array response.data?', Array.isArray(response.data));
-      console.log('🔍 Claves de response.data:', Object.keys(response.data));
-      console.log('🔍 Contenido completo de response.data:', JSON.stringify(response.data, null, 2));
-      
-      // El backend devuelve {success: true, data: [...]}
-      const data = Array.isArray(response) ? response : 
-                   Array.isArray((response as any)?.data?.data) ? (response as any).data.data : 
-                   Array.isArray((response as any)?.data) ? (response as any).data : [];
-      console.log('📋 Datos procesados:', data);
-      
-      setVacaciones(data as Vacacion[]);
+      setVacaciones((response.data || []) as Vacacion[]);
     } catch (error) {
-      console.error('❌ Error al cargar vacaciones:', error);
+      console.error('Error al cargar vacaciones:', error);
       setVacaciones([]);
     } finally {
       setLoading(false);
@@ -136,8 +114,7 @@ const VacacionesCalendarAdvanced: React.FC<VacacionesCalendarAdvancedProps> = ({
   const cargarEmpleados = async () => {
     try {
       const response = await empleadosService.getEmpleados();
-      const data = Array.isArray(response) ? response : Array.isArray((response as any)?.data) ? (response as any).data : [];
-      setEmpleados(data);
+      setEmpleados(response.data || []);
     } catch (error) {
       console.error('Error al cargar empleados:', error);
     }
@@ -157,14 +134,12 @@ const VacacionesCalendarAdvanced: React.FC<VacacionesCalendarAdvancedProps> = ({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      console.log('📝 Enviando datos de vacación:', formData);
-      const response = await vacacionesService.createVacacion(formData);
-      console.log('✅ Vacación creada:', response);
+      await vacacionesService.createVacacion(formData);
       setShowModal(false);
       cargarVacaciones();
     } catch (error: any) {
-      console.error('❌ Error al crear vacación:', error);
-      const errorMessage = error.response?.data?.message || error.message || 'Error desconocido al crear la vacación';
+      console.error('Error al crear vacación:', error);
+      const errorMessage = error.response?.data?.message || error.message || 'Error al crear la vacación';
       alert(`Error al crear la vacación:\n\n${errorMessage}`);
     }
   };
@@ -228,10 +203,7 @@ const VacacionesCalendarAdvanced: React.FC<VacacionesCalendarAdvancedProps> = ({
   };
 
   const getVacacionesPorDia = (fecha: Date) => {
-    if (!Array.isArray(vacaciones)) {
-      console.warn('vacaciones no es un array:', vacaciones);
-      return [];
-    }
+    if (!Array.isArray(vacaciones)) return [];
     return vacaciones.filter(vacacion => {
       // Filtro por estado
       if (filtroEstado !== 'todos' && vacacion.estado !== filtroEstado) {
