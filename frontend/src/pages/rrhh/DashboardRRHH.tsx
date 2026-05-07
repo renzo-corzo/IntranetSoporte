@@ -41,8 +41,17 @@ const DashboardRRHH: React.FC = () => {
   const cargarEstadisticas = async () => {
     try {
       setLoading(true);
-      const response = await empleadosService.getEstadisticas();
-      setEstadisticas(response.data);
+      const data = await empleadosService.getEstadisticas();
+      const porDeptoArray = Object.entries(data.porDepartamento || {}).map(([departamento, count]) => ({
+        departamento,
+        _count: { id: count as number }
+      }));
+      setEstadisticas({
+        totalEmpleados: data.total ?? 0,
+        empleadosActivos: data.activos ?? 0,
+        vacacionesPendientes: 0,
+        empleadosPorDepartamento: porDeptoArray
+      });
     } catch (error) {
       console.error('Error al cargar estadísticas:', error);
     } finally {
