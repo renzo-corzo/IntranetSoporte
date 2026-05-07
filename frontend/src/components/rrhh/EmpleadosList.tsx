@@ -4,7 +4,6 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { empleadosService } from '@/services/empleados.service';
@@ -65,17 +64,7 @@ const EmpleadosList: React.FC<EmpleadosListProps> = ({ filtros }) => {
     departamento: '',
     fechaIngreso: '',
     diasDisponibles: 20,
-    diasBase2023: null as number | null
   });
-  const [diasCalculo, setDiasCalculo] = useState<{
-    aniosAntiguedad?: number;
-    diasSegunConvenio?: number;
-    diasBase2023?: number;
-    diasAcumuladosDesde2023?: number;
-    diasUsados?: number;
-    diasDisponiblesSugeridos?: number;
-  } | null>(null);
-  const [calculandoDias, setCalculandoDias] = useState(false);
 
   useEffect(() => {
     cargarEmpleados();
@@ -112,10 +101,8 @@ const EmpleadosList: React.FC<EmpleadosListProps> = ({ filtros }) => {
       departamento: '',
       fechaIngreso: '',
       diasDisponibles: 20,
-      diasBase2023: null
     });
     setEmpleadoSeleccionado(null);
-    setDiasCalculo(null); // Limpiar cálculo al crear
     setError(null);
     setSuccess(null);
     setShowModal(true);
@@ -130,10 +117,8 @@ const EmpleadosList: React.FC<EmpleadosListProps> = ({ filtros }) => {
       departamento: empleado.departamento,
       fechaIngreso: empleado.fechaIngreso.split('T')[0],
       diasDisponibles: empleado.diasDisponibles,
-      diasBase2023: empleado.diasBase2023 || null
     });
     setEmpleadoSeleccionado(empleado);
-    setDiasCalculo(null); // Limpiar cálculo al editar
     setError(null);
     setSuccess(null);
     setShowModal(true);
@@ -407,97 +392,10 @@ const EmpleadosList: React.FC<EmpleadosListProps> = ({ filtros }) => {
                 id="fechaIngreso"
                 type="date"
                 value={formData.fechaIngreso}
-                onChange={(e) => {
-                  setFormData(prev => ({ ...prev, fechaIngreso: e.target.value }));
-                  setDiasCalculo(null); // Limpiar cálculo cuando cambia la fecha
-                }}
+                onChange={(e) => setFormData(prev => ({ ...prev, fechaIngreso: e.target.value }))}
                 required
               />
-              <p className="text-xs text-gray-500 mt-1">
-                Convenio: &lt; 5 años = 15 días hábiles, ≥ 5 y &lt; 10 años = 21 días hábiles, ≥ 10 años = 27 días hábiles
-              </p>
             </div>
-
-            <div>
-              <Label htmlFor="diasBase2023">Días Disponibles al Inicio de 2023 *</Label>
-              <Input
-                id="diasBase2023"
-                type="number"
-                min="0"
-                value={formData.diasBase2023 || ''}
-                onChange={(e) => {
-                  const value = e.target.value === '' ? null : parseInt(e.target.value) || 0;
-                  setFormData(prev => ({ ...prev, diasBase2023: value }));
-                  setDiasCalculo(null); // Limpiar cálculo cuando cambia
-                }}
-                required
-              />
-              <p className="text-xs text-gray-500 mt-1">
-                Días que el empleado tenía disponibles al 1 de enero de 2023 (antes de sumar días por años)
-              </p>
-            </div>
-
-            {/* Botón para calcular días sugeridos (solo al editar) */}
-            {empleadoSeleccionado && formData.fechaIngreso && (
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                <div className="flex items-center justify-between mb-2">
-                  <Label className="text-sm font-semibold text-blue-900">
-                    Calcular días según convenio
-                  </Label>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={async () => {
-                      if (!empleadoSeleccionado?.id || !formData.fechaIngreso) return;
-                      try {
-                        setCalculandoDias(true);
-                        const calculo = await empleadosService.calcularDiasSugeridos(
-                          empleadoSeleccionado.id,
-                          formData.diasBase2023 || undefined
-                        );
-                        setDiasCalculo(calculo);
-                        // Actualizar días disponibles con el valor sugerido
-                        if (calculo.diasDisponiblesSugeridos !== undefined) {
-                          setFormData(prev => ({
-                            ...prev,
-                            diasDisponibles: calculo.diasDisponiblesSugeridos || prev.diasDisponibles
-                          }));
-                        }
-                      } catch (error) {
-                        console.error('Error al calcular días:', error);
-                        alert('Error al calcular días sugeridos');
-                      } finally {
-                        setCalculandoDias(false);
-                      }
-                    }}
-                    disabled={calculandoDias}
-                  >
-                    {calculandoDias ? 'Calculando...' : '📊 Calcular días sugeridos'}
-                  </Button>
-                </div>
-                {diasCalculo && (
-                  <div className="text-sm space-y-1 text-gray-700">
-                    <p><strong>Años de antigüedad:</strong> {diasCalculo.aniosAntiguedad}</p>
-                    <p><strong>Días según convenio (anual):</strong> {diasCalculo.diasSegunConvenio} días</p>
-                    {diasCalculo.diasBase2023 !== undefined && (
-                      <p><strong>Días base 2023:</strong> {diasCalculo.diasBase2023} días</p>
-                    )}
-                    {diasCalculo.diasAcumuladosDesde2023 !== undefined && (
-                      <p><strong>Días acumulados desde 2023:</strong> {diasCalculo.diasAcumuladosDesde2023} días</p>
-                    )}
-                    {diasCalculo.diasUsados !== undefined && (
-                      <p><strong>Días usados:</strong> {diasCalculo.diasUsados} días</p>
-                    )}
-                    {diasCalculo.diasDisponiblesSugeridos !== undefined && (
-                      <p className="font-semibold text-blue-700">
-                        <strong>Días disponibles sugeridos:</strong> {diasCalculo.diasDisponiblesSugeridos} días
-                      </p>
-                    )}
-                  </div>
-                )}
-              </div>
-            )}
 
             <div className="flex justify-end space-x-2 pt-4">
               <Button type="button" variant="outline" onClick={() => setShowModal(false)}>
