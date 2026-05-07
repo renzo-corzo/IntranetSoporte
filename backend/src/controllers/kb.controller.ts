@@ -134,8 +134,8 @@ export const createArticulo = async (req: Request, res: Response) => {
   try {
     const { titulo, contenido, categoriaId, adjuntos, codigo, version, area, responsable, estado, fechaRevision } = req.body;
     const creadoPorId = (req as any).user.id;
-    if (!titulo || !contenido || !categoriaId) {
-      return res.status(400).json({ error: "Faltan campos obligatorios: titulo, contenido y categoriaId" });
+    if (!titulo || !categoriaId) {
+      return res.status(400).json({ error: "Faltan campos obligatorios: titulo y categoriaId" });
     }
     const articulo = await prisma.articulo.create({
       data: {

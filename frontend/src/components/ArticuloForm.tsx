@@ -182,8 +182,8 @@ const ArticuloForm: React.FC<ArticuloFormProps> = ({ articulo, categorias, onSub
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!titulo.trim() || !categoriaId) {
-      alert('Por favor completá título y categoría');
+    if (!titulo.trim()) {
+      alert('El título es obligatorio');
       return;
     }
     onSubmit({
@@ -281,7 +281,7 @@ const ArticuloForm: React.FC<ArticuloFormProps> = ({ articulo, categorias, onSub
             <div>
               <label className={labelCls}>Categoría *</label>
               <select value={categoriaId} onChange={e => setCategoriaId(e.target.value)}
-                className={inputCls} required>
+                className={inputCls}>
                 <option value="">Seleccionar categoría</option>
                 {categorias.map(cat => <option key={cat.id} value={cat.id}>{cat.nombre}</option>)}
               </select>
