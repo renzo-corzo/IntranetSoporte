@@ -62,7 +62,7 @@ const Links: React.FC = () => {
     fetchLinks();
   };
   return (
-    <div className="p-6 min-h-screen bg-gray-50">
+    <div>
       {/* Header moderno */}
       <div className="mb-8">
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between mb-6 space-y-4 lg:space-y-0">

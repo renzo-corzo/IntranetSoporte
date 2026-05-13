@@ -60,8 +60,8 @@ const VacacionesAdmin: React.FC = () => {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Administración de Vacaciones</h1>
-          <p className="text-gray-600">Aprobación, rechazo y consulta de solicitudes</p>
+          <h1 className="text-2xl font-bold text-slate-800">Administración de Vacaciones</h1>
+          <p className="text-sm text-slate-500 mt-0.5">Aprobación, rechazo y consulta de solicitudes</p>
         </div>
       </div>
 

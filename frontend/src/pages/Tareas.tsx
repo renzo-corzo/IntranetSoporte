@@ -99,59 +99,34 @@ const Tareas: React.FC = () => {
 
   const hayFiltros = busqueda || filtroEstado || filtroPrioridad || filtroResponsable || soloMias || soloVencidas;
 
-  const inputStyle: React.CSSProperties = {
-    fontSize: 12, padding: '6px 10px',
-    border: '0.5px solid rgba(0,0,0,0.15)', borderRadius: 6,
-    background: 'white', fontFamily: 'inherit',
-  };
+  const filterCls = "px-2.5 py-1.5 text-xs border border-slate-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-slate-700";
 
   return (
-    <div style={{ padding: '0 0 24px', fontFamily: 'Inter, sans-serif' }}>
+    <div className="pb-6 space-y-4">
 
       {/* Header */}
-      <div style={{
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        marginBottom: 16, flexWrap: 'wrap', gap: 10,
-      }}>
+      <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 style={{ fontSize: 20, fontWeight: 700, color: '#1a1a1a', margin: 0 }}>
-            Mesa operativa IT
-          </h1>
-          <p style={{ fontSize: 12, color: '#888', margin: '2px 0 0' }}>
-            Infraestructura · Caja de Abogados
-          </p>
+          <h1 className="text-xl font-bold text-slate-800">Mesa operativa IT</h1>
+          <p className="text-xs text-slate-500 mt-0.5">Infraestructura · Caja de Abogados</p>
         </div>
 
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+        <div className="flex gap-2 items-center flex-wrap">
           {/* Selector de vista */}
-          <div style={{
-            display: 'flex', background: '#f3f4f6',
-            border: '0.5px solid rgba(0,0,0,0.1)', borderRadius: 7, overflow: 'hidden',
-          }}>
+          <div className="flex bg-slate-100 border border-slate-200 rounded-lg overflow-hidden">
             {(['kanban', 'lista'] as Vista[]).map(v => (
-              <button key={v} onClick={() => setVista(v)} style={{
-                padding: '5px 12px', fontSize: 12, fontWeight: 500,
-                background: vista === v ? 'white' : 'transparent',
-                color: vista === v ? '#185FA5' : '#666',
-                border: 'none', cursor: 'pointer',
-                borderRight: v === 'kanban' ? '0.5px solid rgba(0,0,0,0.1)' : 'none',
-                fontFamily: 'inherit',
-              }}>
+              <button key={v} onClick={() => setVista(v)}
+                className={`px-3 py-1.5 text-xs font-medium transition-colors ${
+                  vista === v ? 'bg-white text-blue-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+                } ${v === 'kanban' ? 'border-r border-slate-200' : ''}`}
+              >
                 {v === 'kanban' ? 'Kanban' : 'Lista'}
               </button>
             ))}
           </div>
 
-          <button
-            onClick={() => handleNuevaTarea()}
-            style={{
-              display: 'flex', alignItems: 'center', gap: 6,
-              padding: '6px 14px', fontSize: 13, fontWeight: 600,
-              background: '#185FA5', color: 'white',
-              border: 'none', borderRadius: 7, cursor: 'pointer',
-            }}
-          >
-            <span style={{ fontSize: 16, lineHeight: 1 }}>+</span> Nueva tarea
+          <button onClick={() => handleNuevaTarea()} className="btn-primary btn-sm">
+            + Nueva tarea
           </button>
         </div>
       </div>
@@ -160,53 +135,44 @@ const Tareas: React.FC = () => {
       <TareasKpis kpis={kpis} loading={loading && !kpis} />
 
       {/* Filtros */}
-      <div style={{
-        display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap', alignItems: 'center',
-      }}>
+      <div className="flex gap-2 flex-wrap items-center">
         <input
           type="text"
           placeholder="Buscar tareas..."
           value={busqueda}
           onChange={e => setBusqueda(e.target.value)}
-          style={{ ...inputStyle, width: 200 }}
+          className={`${filterCls} w-44`}
         />
-        <select value={filtroEstado} onChange={e => setFiltroEstado(e.target.value)} style={inputStyle}>
+        <select value={filtroEstado} onChange={e => setFiltroEstado(e.target.value)} className={filterCls}>
           <option value="">Todos los estados</option>
           {['pendiente','en_curso','bloqueada','en_espera','resuelta','cancelada'].map(e => (
             <option key={e} value={e}>{e.replace('_',' ')}</option>
           ))}
         </select>
-        <select value={filtroPrioridad} onChange={e => setFiltroPrioridad(e.target.value)} style={inputStyle}>
+        <select value={filtroPrioridad} onChange={e => setFiltroPrioridad(e.target.value)} className={filterCls}>
           <option value="">Todas las prioridades</option>
           {['baja','media','alta','critica'].map(p => (
             <option key={p} value={p}>{p.charAt(0).toUpperCase() + p.slice(1)}</option>
           ))}
         </select>
-        <select value={filtroResponsable} onChange={e => setFiltroResponsable(e.target.value)} style={inputStyle}>
+        <select value={filtroResponsable} onChange={e => setFiltroResponsable(e.target.value)} className={filterCls}>
           <option value="">Todos los responsables</option>
           {usuarios.map(u => <option key={u.id} value={u.id}>{u.nombre}</option>)}
         </select>
 
-        <label style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 12, color: '#555', cursor: 'pointer' }}>
-          <input type="checkbox" checked={soloMias} onChange={e => setSoloMias(e.target.checked)} style={{ cursor: 'pointer' }} />
+        <label className="flex items-center gap-1.5 text-xs text-slate-600 cursor-pointer">
+          <input type="checkbox" checked={soloMias} onChange={e => setSoloMias(e.target.checked)} className="cursor-pointer" />
           Mis tareas
         </label>
-        <label style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 12, color: '#555', cursor: 'pointer' }}>
-          <input type="checkbox" checked={soloVencidas} onChange={e => setSoloVencidas(e.target.checked)} style={{ cursor: 'pointer' }} />
+        <label className="flex items-center gap-1.5 text-xs text-slate-600 cursor-pointer">
+          <input type="checkbox" checked={soloVencidas} onChange={e => setSoloVencidas(e.target.checked)} className="cursor-pointer" />
           Vencidas
         </label>
 
         {hayFiltros && (
           <button
-            onClick={() => {
-              setBusqueda(''); setFiltroEstado(''); setFiltroPrioridad('');
-              setFiltroResponsable(''); setSoloMias(false); setSoloVencidas(false);
-            }}
-            style={{
-              padding: '5px 10px', fontSize: 11, color: '#888',
-              background: 'none', border: '0.5px solid rgba(0,0,0,0.15)',
-              borderRadius: 6, cursor: 'pointer',
-            }}
+            onClick={() => { setBusqueda(''); setFiltroEstado(''); setFiltroPrioridad(''); setFiltroResponsable(''); setSoloMias(false); setSoloVencidas(false); }}
+            className="px-2.5 py-1.5 text-xs text-slate-500 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors"
           >
             Limpiar filtros
           </button>
@@ -214,10 +180,10 @@ const Tareas: React.FC = () => {
       </div>
 
       {/* Contenido principal */}
-      <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start' }}>
-        <div style={{ flex: 1, minWidth: 0 }}>
+      <div className="flex gap-4 items-start">
+        <div className="flex-1 min-w-0">
           {loading && tareas.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '48px 0', color: '#aaa', fontSize: 14 }}>
+            <div className="text-center py-12 text-slate-400 text-sm">
               Cargando tareas...
             </div>
           ) : vista === 'kanban' ? (

@@ -19,7 +19,7 @@ const CMDB: React.FC = () => {
 
   if (!canRead) {
     return (
-      <div className="p-6 min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="flex items-center justify-center py-20">
         <div className="text-center">
           <h2 className="text-2xl font-bold text-gray-800 mb-2">Acceso Denegado</h2>
           <p className="text-gray-600">No tienes permisos para acceder al módulo CMDB</p>
@@ -40,19 +40,14 @@ const CMDB: React.FC = () => {
   ];
 
   return (
-    <div className="p-6 min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="mb-6">
-        <div className="flex items-center space-x-3 mb-2">
-          <div className="h-10 w-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center">
-            <ServerIcon className="h-6 w-6 text-white" />
-          </div>
-          <div>
-            <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
-              CMDB - Inventario de Infraestructura
-            </h1>
-            <p className="text-gray-600 text-sm">Gestión centralizada de activos de TI</p>
-          </div>
+    <div className="space-y-6">
+      <div className="flex items-center gap-3">
+        <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center flex-shrink-0">
+          <ServerIcon className="h-5 w-5 text-white" />
+        </div>
+        <div>
+          <h1 className="text-2xl font-bold text-slate-800">CMDB — Inventario de Infraestructura</h1>
+          <p className="text-sm text-slate-500">Gestión centralizada de activos de TI</p>
         </div>
       </div>
 

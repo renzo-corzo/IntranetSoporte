@@ -82,8 +82,8 @@ const DashboardRRHH: React.FC = () => {
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Dashboard RRHH</h1>
-          <p className="text-gray-600">Gestión de empleados, vacaciones y licencias</p>
+          <h1 className="text-2xl font-bold text-slate-800">Dashboard RRHH</h1>
+          <p className="text-sm text-slate-500 mt-0.5">Gestión de empleados, vacaciones y licencias</p>
         </div>
         <Button onClick={cargarEstadisticas} variant="outline">
           🔄 Actualizar
