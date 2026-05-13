@@ -85,7 +85,7 @@ const Dashboard: React.FC = () => {
     <div className="flex h-screen bg-slate-50 overflow-hidden">
       {/* ─── Sidebar ─────────────────────────────────────────────── */}
       <aside
-        className={`flex flex-col bg-slate-900 flex-shrink-0 transition-all duration-300 ease-in-out ${
+        className={`flex flex-col bg-slate-900 text-slate-100 flex-shrink-0 transition-all duration-300 ease-in-out ${
           isCollapsed ? "w-16" : "w-64"
         }`}
       >
@@ -121,7 +121,7 @@ const Dashboard: React.FC = () => {
                 } ${
                   isActive
                     ? "bg-blue-600 text-white shadow-sm"
-                    : "text-slate-400 hover:bg-slate-800 hover:text-slate-100"
+                    : "text-slate-300 hover:bg-slate-800 hover:text-white"
                 }`
               }
             >
@@ -142,7 +142,7 @@ const Dashboard: React.FC = () => {
                 } ${
                   isActive
                     ? "bg-blue-600 text-white shadow-sm"
-                    : "text-slate-400 hover:bg-slate-800 hover:text-slate-100"
+                    : "text-slate-300 hover:bg-slate-800 hover:text-white"
                 }`
               }
             >
@@ -167,7 +167,7 @@ const Dashboard: React.FC = () => {
           <button
             onClick={logout}
             title={isCollapsed ? "Cerrar sesión" : undefined}
-            className={`w-full flex items-center py-2.5 rounded-lg text-slate-400 hover:bg-red-500/10 hover:text-red-400 transition-colors duration-150 ${
+            className={`w-full flex items-center py-2.5 rounded-lg text-slate-300 hover:bg-red-500/10 hover:text-red-400 transition-colors duration-150 ${
               isCollapsed ? "justify-center px-2" : "px-3 gap-3"
             }`}
           >
