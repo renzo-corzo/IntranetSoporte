@@ -1,5 +1,5 @@
-import React, { useMemo } from "react";
-import { NavLink, Outlet } from "react-router-dom";
+import React, { useMemo, useState } from "react";
+import { NavLink, Outlet, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import {
   HomeIcon,
@@ -10,126 +10,229 @@ import {
   Cog6ToothIcon,
   ClipboardDocumentCheckIcon,
   CalendarDaysIcon,
-  ServerIcon
+  ServerIcon,
+  Bars3Icon,
+  ArrowRightOnRectangleIcon,
+  UserGroupIcon,
+  ChevronRightIcon,
 } from "@heroicons/react/24/outline";
 
-const navItems = [
-  { to: "/dashboard/home", label: "Inicio", icon: HomeIcon },
-  { to: "/dashboard/relevamientos", label: "Relevamientos", icon: ClipboardDocumentListIcon },
-  { to: "/dashboard/links", label: "Links", icon: LinkIcon },
-  { to: "/dashboard/stock", label: "Stock", icon: CubeIcon },
-  { to: "/dashboard/cmdb", label: "CMDB", icon: ServerIcon },
-  { to: "/dashboard/tareas", label: "Tareas", icon: CheckCircleIcon },
-  { to: "/dashboard/procedimientos", label: "Procedimientos", icon: ClipboardDocumentCheckIcon },
-  { to: "/dashboard/vacaciones/mis", label: "Vacaciones", icon: CalendarDaysIcon },
-  { to: "/dashboard/admin", label: "Admin", icon: Cog6ToothIcon },
+type NavItem = {
+  to: string;
+  label: string;
+  icon: React.ElementType;
+  permission: string | string[] | null;
+};
+
+const NAV_ITEMS: NavItem[] = [
+  { to: "/dashboard/home",           label: "Inicio",          icon: HomeIcon,                    permission: null },
+  { to: "/dashboard/relevamientos",  label: "Relevamientos",   icon: ClipboardDocumentListIcon,   permission: "ver_monitor" },
+  { to: "/dashboard/links",          label: "Links",            icon: LinkIcon,                    permission: "ver_documentos" },
+  { to: "/dashboard/stock",          label: "Stock",            icon: CubeIcon,                    permission: ["stock:read", "ver_stock"] },
+  { to: "/dashboard/cmdb",           label: "CMDB",             icon: ServerIcon,                  permission: ["cmdb:read", "cmdb:manage"] },
+  { to: "/dashboard/tareas",         label: "Tareas",           icon: CheckCircleIcon,             permission: null },
+  { to: "/dashboard/procedimientos", label: "Procedimientos",   icon: ClipboardDocumentCheckIcon,  permission: "ver_documentos" },
+  { to: "/dashboard/vacaciones/mis", label: "Vacaciones",       icon: CalendarDaysIcon,            permission: "ver_vacaciones" },
+  { to: "/dashboard/admin",          label: "Admin",            icon: Cog6ToothIcon,               permission: ["ver_roles", "asignar_permisos"] },
 ];
+
+const ROUTE_LABELS: Record<string, string> = {
+  home: "Inicio",
+  relevamientos: "Relevamientos",
+  links: "Links Útiles",
+  stock: "Stock",
+  cmdb: "CMDB",
+  tareas: "Tareas",
+  procedimientos: "Procedimientos",
+  admin: "Administración",
+  rrhh: "RRHH",
+  vacaciones: "Vacaciones",
+  mis: "Mis Solicitudes",
+  permisos: "Permisos",
+  roles: "Roles y Permisos",
+};
+
+function useBreadcrumb(): string[] {
+  const { pathname } = useLocation();
+  const segments = pathname.replace(/^\/dashboard\/?/, "").split("/").filter(Boolean);
+  return segments.map(s => ROUTE_LABELS[s] ?? s);
+}
 
 const Dashboard: React.FC = () => {
   const { user, logout } = useAuth();
-  const hasPerm = (p: string) => (user?.permisos || []).includes(p) || user?.rol === 'admin';
-  const items = useMemo(() => {
-    // Mapa de permisos requeridos por ruta
-    const permissionMap: Record<string, string | string[] | null> = {
-      "/dashboard/home": null,
-      "/dashboard/relevamientos": "ver_monitor",
-      "/dashboard/links": "ver_documentos",
-      "/dashboard/stock": ["stock:read", "ver_stock"],
-      "/dashboard/cmdb": ["cmdb:read", "cmdb:manage"],
-      "/dashboard/tareas": null,
-      "/dashboard/procedimientos": "ver_documentos",
-      "/dashboard/vacaciones/mis": "ver_vacaciones",
-      "/dashboard/admin": "ver_roles",
-    };
+  const [isCollapsed, setIsCollapsed] = useState(false);
+  const breadcrumb = useBreadcrumb();
 
-    return navItems.filter((it) => {
-      const required = permissionMap[it.to];
-      if (it.to === '/dashboard/admin') return hasPerm('ver_roles') || hasPerm('asignar_permisos');
-      if (!required) return true; // público
-      const requiredList = Array.isArray(required) ? required : [required];
-      return requiredList.some(hasPerm);
+  const hasPerm = (p: string) =>
+    (user?.permisos || []).includes(p) || user?.rol === "admin";
+
+  const items = useMemo(() => {
+    return NAV_ITEMS.filter(({ permission }) => {
+      if (!permission) return true;
+      const list = Array.isArray(permission) ? permission : [permission];
+      return list.some(hasPerm);
     });
   }, [user]);
 
+  const showRRHH =
+    hasPerm("rrhh:ver") ||
+    user?.rol === "admin_rrhh" ||
+    user?.rol === "rrhh";
+
+  const initials = user?.nombre?.charAt(0).toUpperCase() ?? "U";
+
   return (
-    <div className="flex min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
-      {/* Sidebar Moderno */}
-      <aside className="min-w-[280px] w-80 bg-white/80 backdrop-blur-xl border-r border-gray-200/50 flex flex-col justify-between py-8 px-6 shadow-2xl">
-        <div>
-          {/* Logo y Header */}
-          <div className="mb-12 text-center">
-            <div className="w-16 h-16 bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl mx-auto mb-4 flex items-center justify-center shadow-lg">
-              <span className="text-white font-bold text-xl">IC</span>
-            </div>
-            <h1 className="text-lg font-bold text-gray-800 tracking-tight leading-tight">Infraestructura</h1>
-            <p className="text-sm text-gray-500 font-medium">Caja de Abogados</p>
+    <div className="flex h-screen bg-slate-50 overflow-hidden">
+      {/* ─── Sidebar ─────────────────────────────────────────────── */}
+      <aside
+        className={`flex flex-col bg-slate-900 flex-shrink-0 transition-all duration-300 ease-in-out ${
+          isCollapsed ? "w-16" : "w-64"
+        }`}
+      >
+        {/* Logo */}
+        <div
+          className={`h-14 flex items-center border-b border-slate-700/50 flex-shrink-0 ${
+            isCollapsed ? "justify-center px-2" : "px-5"
+          }`}
+        >
+          <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center flex-shrink-0 shadow-md">
+            <span className="text-white font-bold text-xs">IC</span>
           </div>
-          
-          {/* Navigation */}
-          <nav className="space-y-2">
-            {items.map((item) => {
-              const Icon = item.icon;
-              // Mostrar Admin Vacaciones sólo a admin se hará con item.to === '/dashboard/vacaciones/admin'
-              if (item.to === '/dashboard/vacaciones/admin') return null;
-              return (
-                <NavLink
-                  key={item.to}
-                  to={item.to}
-                  className={({ isActive }) =>
-                    `nav-link ${isActive ? "nav-link-active" : ""}`
-                  }
-                >
-                  <Icon className="w-5 h-5 mr-3" />
-                  <span className="font-medium">{item.label}</span>
-                </NavLink>
-              );
-            })}
-            {/* Enlace RRHH: requiere permiso o rol dedicado */}
-            {(hasPerm('rrhh:ver') || user?.rol === 'admin_rrhh' || user?.rol === 'rrhh') && (
-              <NavLink
-                to="/dashboard/rrhh"
-                className={({ isActive }) => `nav-link ${isActive ? 'nav-link-active' : ''}`}
-              >
-                <CalendarDaysIcon className="w-5 h-5 mr-3" />
-                <span className="font-medium">🧑‍💼 RRHH</span>
-              </NavLink>
-            )}
-          </nav>
+          {!isCollapsed && (
+            <div className="ml-3 min-w-0">
+              <p className="text-white font-semibold text-sm leading-tight truncate">
+                Infraestructura
+              </p>
+              <p className="text-slate-400 text-xs truncate">Caja de Abogados</p>
+            </div>
+          )}
         </div>
-        
-        {/* User Section */}
-        <div className="space-y-4">
-          <div className="p-4 bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl border border-blue-100">
-            <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center">
-                <span className="text-white font-semibold text-sm">{user?.nombre?.charAt(0)}</span>
-              </div>
-              <div>
-                <p className="text-sm font-semibold text-gray-800">{user?.nombre}</p>
-                <p className="text-xs text-gray-600 capitalize">{user?.rol}</p>
-              </div>
+
+        {/* Nav items */}
+        <nav className="flex-1 py-3 px-2 space-y-0.5 overflow-y-auto overflow-x-hidden">
+          {items.map(({ to, label, icon: Icon }) => (
+            <NavLink
+              key={to}
+              to={to}
+              title={isCollapsed ? label : undefined}
+              className={({ isActive }) =>
+                `flex items-center py-2.5 rounded-lg transition-colors duration-150 ${
+                  isCollapsed ? "justify-center px-2" : "px-3 gap-3"
+                } ${
+                  isActive
+                    ? "bg-blue-600 text-white shadow-sm"
+                    : "text-slate-400 hover:bg-slate-800 hover:text-slate-100"
+                }`
+              }
+            >
+              <Icon className="w-5 h-5 flex-shrink-0" />
+              {!isCollapsed && (
+                <span className="text-sm font-medium">{label}</span>
+              )}
+            </NavLink>
+          ))}
+
+          {showRRHH && (
+            <NavLink
+              to="/dashboard/rrhh"
+              title={isCollapsed ? "RRHH" : undefined}
+              className={({ isActive }) =>
+                `flex items-center py-2.5 rounded-lg transition-colors duration-150 ${
+                  isCollapsed ? "justify-center px-2" : "px-3 gap-3"
+                } ${
+                  isActive
+                    ? "bg-blue-600 text-white shadow-sm"
+                    : "text-slate-400 hover:bg-slate-800 hover:text-slate-100"
+                }`
+              }
+            >
+              <UserGroupIcon className="w-5 h-5 flex-shrink-0" />
+              {!isCollapsed && (
+                <span className="text-sm font-medium">RRHH</span>
+              )}
+            </NavLink>
+          )}
+        </nav>
+
+        {/* User / Logout */}
+        <div className="flex-shrink-0 p-2 border-t border-slate-700/50 space-y-0.5">
+          {!isCollapsed && (
+            <div className="px-3 py-2">
+              <p className="text-slate-200 text-sm font-medium truncate">
+                {user?.nombre}
+              </p>
+              <p className="text-slate-500 text-xs capitalize">{user?.rol}</p>
             </div>
-          </div>
+          )}
           <button
             onClick={logout}
-            className="btn-danger w-full"
+            title={isCollapsed ? "Cerrar sesión" : undefined}
+            className={`w-full flex items-center py-2.5 rounded-lg text-slate-400 hover:bg-red-500/10 hover:text-red-400 transition-colors duration-150 ${
+              isCollapsed ? "justify-center px-2" : "px-3 gap-3"
+            }`}
           >
-            <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-            </svg>
-            Cerrar sesión
+            <ArrowRightOnRectangleIcon className="w-5 h-5 flex-shrink-0" />
+            {!isCollapsed && (
+              <span className="text-sm font-medium">Cerrar sesión</span>
+            )}
           </button>
         </div>
       </aside>
-      
-      {/* Main content */}
-      <main className="flex-1 p-8 overflow-y-auto">
-        <div className="max-w-7xl mx-auto">
-          <Outlet />
-        </div>
-      </main>
+
+      {/* ─── Main area ───────────────────────────────────────────── */}
+      <div className="flex-1 flex flex-col overflow-hidden">
+        {/* Topbar */}
+        <header className="h-14 bg-white border-b border-slate-200 flex items-center px-4 flex-shrink-0 gap-3">
+          <button
+            onClick={() => setIsCollapsed(!isCollapsed)}
+            className="p-2 rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-700 transition-colors"
+            title={isCollapsed ? "Expandir menú" : "Colapsar menú"}
+          >
+            <Bars3Icon className="w-5 h-5" />
+          </button>
+
+          {/* Breadcrumb */}
+          <nav className="flex items-center gap-1 text-sm min-w-0">
+            <span className="text-slate-400 flex-shrink-0">Infra</span>
+            {breadcrumb.map((crumb, i) => (
+              <React.Fragment key={i}>
+                <ChevronRightIcon className="w-3.5 h-3.5 text-slate-300 flex-shrink-0" />
+                <span
+                  className={`truncate ${
+                    i === breadcrumb.length - 1
+                      ? "text-slate-700 font-medium"
+                      : "text-slate-400"
+                  }`}
+                >
+                  {crumb}
+                </span>
+              </React.Fragment>
+            ))}
+          </nav>
+
+          {/* User chip */}
+          <div className="ml-auto flex items-center gap-2.5 flex-shrink-0">
+            <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center shadow-sm">
+              <span className="text-white text-xs font-semibold">{initials}</span>
+            </div>
+            <div className="hidden sm:block text-right">
+              <p className="text-sm font-medium text-slate-700 leading-tight">
+                {user?.nombre}
+              </p>
+              <p className="text-xs text-slate-400 capitalize">{user?.rol}</p>
+            </div>
+          </div>
+        </header>
+
+        {/* Content */}
+        <main className="flex-1 overflow-y-auto">
+          <div className="p-6 max-w-7xl mx-auto">
+            <Outlet />
+          </div>
+        </main>
+      </div>
     </div>
   );
 };
 
-export default Dashboard; 
+export default Dashboard;
