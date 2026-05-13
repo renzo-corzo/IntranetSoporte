@@ -17,12 +17,157 @@ import {
   obtenerProductos,
   obtenerAlertas,
   obtenerMovimientos,
+  obtenerProductoPorId,
   eliminarProducto,
+  marcarAlertaLeida,
   type DashboardStock,
   type ProductoStock,
   type AlertaStock,
   type MovimientoStock
 } from '../apiStock';
+
+const formatMoneda = (valor: number) =>
+  new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' }).format(valor);
+
+const InfoField: React.FC<{ label: string; value: string }> = ({ label, value }) => (
+  <div>
+    <p className="text-xs text-slate-500 mb-0.5">{label}</p>
+    <p className="text-sm font-medium text-slate-800">{value}</p>
+  </div>
+);
+
+const ProductoDetalleModal: React.FC<{
+  producto: ProductoStock | null;
+  onClose: () => void;
+  onEditar?: (p: ProductoStock) => void;
+  onMovimiento?: (p: ProductoStock) => void;
+  canUpdate: boolean;
+  canManageMovements: boolean;
+}> = ({ producto, onClose, onEditar, onMovimiento, canUpdate, canManageMovements }) => {
+  if (!producto) return null;
+
+  const stockColor =
+    producto.stockActual === 0
+      ? 'text-red-600'
+      : producto.stockActual <= producto.stockMinimo
+      ? 'text-yellow-600'
+      : 'text-green-600';
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal-content max-w-2xl animate-float-modal" onClick={e => e.stopPropagation()}>
+        <div className="modal-header">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="min-w-0">
+              <h2 className="text-lg font-bold text-slate-800 truncate">{producto.nombre}</h2>
+              <p className="text-xs text-slate-500 font-mono">{producto.codigo}</p>
+            </div>
+            <span className={`badge flex-shrink-0 ${producto.estado === 'Activo' ? 'badge-success' : 'badge-danger'}`}>
+              {producto.estado}
+            </span>
+          </div>
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 flex-shrink-0 ml-2">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        <div className="modal-body space-y-5">
+          {/* KPIs de stock */}
+          <div className="grid grid-cols-3 gap-3">
+            <div className="bg-slate-50 rounded-xl p-4 text-center">
+              <p className="text-xs text-slate-500 mb-1">Stock actual</p>
+              <p className={`text-3xl font-bold ${stockColor}`}>{producto.stockActual}</p>
+              <p className="text-xs text-slate-400 mt-0.5">{producto.unidadMedida.abreviacion}</p>
+            </div>
+            <div className="bg-slate-50 rounded-xl p-4 text-center">
+              <p className="text-xs text-slate-500 mb-1">Stock mínimo</p>
+              <p className="text-3xl font-bold text-slate-700">{producto.stockMinimo}</p>
+            </div>
+            <div className="bg-slate-50 rounded-xl p-4 text-center">
+              <p className="text-xs text-slate-500 mb-1">Valor en stock</p>
+              <p className="text-lg font-bold text-blue-600">
+                {producto.precioCompra
+                  ? formatMoneda(producto.precioCompra * producto.stockActual)
+                  : '—'}
+              </p>
+            </div>
+          </div>
+
+          {/* Detalles */}
+          <div className="grid grid-cols-2 gap-x-6 gap-y-3">
+            <InfoField label="Categoría" value={`${producto.categoria.icono || ''} ${producto.categoria.nombre}`} />
+            <InfoField label="Unidad de medida" value={producto.unidadMedida.nombre} />
+            <InfoField label="Marca / Modelo" value={[producto.marca, producto.modelo].filter(Boolean).join(' — ') || '—'} />
+            <InfoField label="Ubicación" value={producto.ubicacion?.nombre || '—'} />
+            <InfoField label="Proveedor" value={producto.proveedor?.nombre || '—'} />
+            <InfoField label="Condición" value={producto.condicion || '—'} />
+            {producto.fechaCompra && (
+              <InfoField label="Fecha de compra" value={new Date(producto.fechaCompra).toLocaleDateString()} />
+            )}
+            {producto.fechaVencimiento && (
+              <InfoField label="Vencimiento" value={new Date(producto.fechaVencimiento).toLocaleDateString()} />
+            )}
+          </div>
+
+          {producto.observaciones && (
+            <div>
+              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">Observaciones</p>
+              <p className="text-sm text-slate-700 bg-slate-50 rounded-lg p-3">{producto.observaciones}</p>
+            </div>
+          )}
+
+          {/* Últimos movimientos */}
+          {producto.movimientos && producto.movimientos.length > 0 && (
+            <div>
+              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">
+                Últimos movimientos
+              </p>
+              <div className="divide-y divide-slate-100">
+                {producto.movimientos.slice(0, 6).map(mov => (
+                  <div key={mov.id} className="flex items-center justify-between py-2 text-sm">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span>{mov.tipoMovimiento.icono}</span>
+                      <span className="text-slate-700 font-medium">{mov.tipoMovimiento.nombre}</span>
+                      {mov.motivo && (
+                        <span className="text-slate-400 text-xs truncate">— {mov.motivo}</span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-3 flex-shrink-0">
+                      <span className={`font-semibold ${mov.cantidad > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                        {mov.cantidad > 0 ? '+' : ''}{mov.cantidad}
+                      </span>
+                      <span className="text-xs text-slate-400">
+                        {new Date(mov.fechaMovimiento).toLocaleDateString()}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div className="modal-footer">
+          {canManageMovements && onMovimiento && (
+            <button onClick={() => { onClose(); onMovimiento(producto); }} className="btn-secondary btn-sm">
+              Registrar movimiento
+            </button>
+          )}
+          {canUpdate && onEditar && (
+            <button onClick={() => { onClose(); onEditar(producto); }} className="btn-primary btn-sm">
+              Editar producto
+            </button>
+          )}
+          {!canUpdate && !canManageMovements && (
+            <button onClick={onClose} className="btn-secondary btn-sm">Cerrar</button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
 import ProductoForm from '../components/ProductoForm';
 import MovimientoForm from '../components/MovimientoForm';
 import { useAuth } from '../context/AuthContext';
@@ -86,6 +231,10 @@ const Stock: React.FC = () => {
   // Estados para el formulario de movimiento
   const [mostrarFormularioMovimiento, setMostrarFormularioMovimiento] = useState(false);
   const [productoParaMovimiento, setProductoParaMovimiento] = useState<ProductoStock | null>(null);
+
+  // Estado para modal de detalle
+  const [productoDetalle, setProductoDetalle] = useState<ProductoStock | null>(null);
+  const [mostrarDetalle, setMostrarDetalle] = useState(false);
 
   useEffect(() => {
     cargarDatos();
@@ -194,13 +343,6 @@ const Stock: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
-
-  const formatearMoneda = (valor: number) => {
-    return new Intl.NumberFormat('es-AR', {
-      style: 'currency',
-      currency: 'ARS'
-    }).format(valor);
   };
 
   const obtenerColorAlerta = (nivel: string) => {
@@ -349,6 +491,60 @@ const Stock: React.FC = () => {
       stockAgotado: false
     });
   };
+
+  const verProducto = async (id: number) => {
+    try {
+      const data = await obtenerProductoPorId(id);
+      setProductoDetalle(data);
+      setMostrarDetalle(true);
+    } catch {
+      alert('Error al cargar el detalle del producto');
+    }
+  };
+
+  const marcarLeida = async (id: number) => {
+    try {
+      await marcarAlertaLeida(id);
+      setAlertas(prev => prev.filter(a => a.id !== id));
+    } catch {
+      alert('Error al marcar la alerta como leída');
+    }
+  };
+
+  const exportarCSV = () => {
+    const escape = (v: any) => `"${String(v ?? '').replace(/"/g, '""')}"`;
+    let headers: string[];
+    let rows: any[][];
+    let filename: string;
+
+    if (vistaActual === 'movimientos') {
+      filename = 'movimientos_stock.csv';
+      headers = ['Número', 'Producto', 'Código', 'Tipo', 'Cantidad', 'Stock Anterior', 'Stock Nuevo', 'Usuario', 'Fecha', 'Motivo', 'Entregado a'];
+      rows = movimientos.map(m => [
+        m.numero, m.producto.nombre, m.producto.codigo,
+        m.tipoMovimiento.nombre, m.cantidad, m.stockAnterior, m.stockNuevo,
+        m.realizadoPor.nombre, new Date(m.fechaMovimiento).toLocaleString(),
+        m.motivo || '', m.entregadoA || ''
+      ]);
+    } else {
+      filename = 'productos_stock.csv';
+      headers = ['Código', 'Nombre', 'Categoría', 'Stock Actual', 'Stock Mínimo', 'Ubicación', 'Estado', 'Marca', 'Modelo'];
+      rows = productos.map(p => [
+        p.codigo, p.nombre, p.categoria.nombre,
+        p.stockActual, p.stockMinimo,
+        p.ubicacion?.nombre || '', p.estado,
+        p.marca || '', p.modelo || ''
+      ]);
+    }
+
+    const csv = [headers.map(escape).join(','), ...rows.map(r => r.map(escape).join(','))].join('\n');
+    const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(a.href);
+  };
   
   const handleClickStockAgotado = () => {
     setVistaActual('productos');
@@ -435,16 +631,16 @@ const Stock: React.FC = () => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 flex items-center">
-            <CubeIcon className="w-8 h-8 mr-3 text-blue-600" />
+          <h1 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
+            <CubeIcon className="w-6 h-6 text-blue-600" />
             Control de Stock
           </h1>
-          <p className="text-gray-600 mt-1">Gestión profesional de inventario - Departamento de Sistemas</p>
+          <p className="text-sm text-slate-500 mt-0.5">Gestión de inventario — Departamento de Sistemas</p>
         </div>
         <div className="flex space-x-3">
-          <button className="btn-secondary flex items-center">
+          <button onClick={exportarCSV} className="btn-secondary flex items-center">
             <DocumentArrowDownIcon className="w-4 h-4 mr-2" />
-            Exportar
+            Exportar CSV
           </button>
           {canManageMovements && (
             <button 
@@ -554,7 +750,7 @@ const Stock: React.FC = () => {
                 <div className="ml-4">
                   <p className="text-sm font-medium text-gray-500">Valor Total</p>
                   <p className="text-2xl font-semibold text-green-600">
-                    {formatearMoneda(dashboard.resumen.valorTotalStock)}
+                    {formatMoneda(dashboard.resumen.valorTotalStock)}
                   </p>
                 </div>
               </div>
@@ -738,7 +934,10 @@ const Stock: React.FC = () => {
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                        <button className="text-blue-600 hover:text-blue-900 mr-3 inline-flex items-center">
+                        <button
+                          onClick={() => verProducto(producto.id)}
+                          className="text-blue-600 hover:text-blue-900 mr-3 inline-flex items-center"
+                        >
                           <EyeIcon className="w-4 h-4 mr-1" />
                           Ver
                         </button>
@@ -1065,7 +1264,10 @@ const Stock: React.FC = () => {
                       </p>
                     </div>
                   </div>
-                  <button className="text-xs px-3 py-1 bg-white bg-opacity-50 rounded-md hover:bg-opacity-75">
+                  <button
+                    onClick={() => marcarLeida(alerta.id)}
+                    className="text-xs px-3 py-1 bg-white bg-opacity-60 rounded-md hover:bg-opacity-100 font-medium transition-all"
+                  >
                     Marcar como leída
                   </button>
                 </div>
@@ -1073,6 +1275,18 @@ const Stock: React.FC = () => {
             ))
           )}
         </div>
+      )}
+
+      {/* Modal de detalle de producto */}
+      {mostrarDetalle && (
+        <ProductoDetalleModal
+          producto={productoDetalle}
+          onClose={() => { setMostrarDetalle(false); setProductoDetalle(null); }}
+          onEditar={canUpdate ? (p) => { abrirFormularioEditar(p); } : undefined}
+          onMovimiento={canManageMovements ? (p) => { abrirFormularioMovimiento(p); } : undefined}
+          canUpdate={canUpdate}
+          canManageMovements={canManageMovements}
+        />
       )}
 
       {/* Modal de formulario de producto */}
