@@ -10,7 +10,10 @@ import {
   DocumentArrowDownIcon,
   PencilIcon,
   EyeIcon,
-  TrashIcon
+  TrashIcon,
+  ArrowPathIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon
 } from '@heroicons/react/24/outline';
 import {
   obtenerDashboardStock,
@@ -35,6 +38,62 @@ const InfoField: React.FC<{ label: string; value: string }> = ({ label, value })
     <p className="text-sm font-medium text-slate-800">{value}</p>
   </div>
 );
+
+const LIMIT = 25;
+
+const Paginacion: React.FC<{
+  page: number;
+  pages: number;
+  total: number;
+  onPage: (p: number) => void;
+}> = ({ page, pages, total, onPage }) => {
+  if (pages <= 1) return null;
+
+  const desde = (page - 1) * LIMIT + 1;
+  const hasta = Math.min(page * LIMIT, total);
+
+  const nums: number[] = [];
+  const start = Math.max(1, Math.min(page - 2, pages - 4));
+  const end = Math.min(pages, start + 4);
+  for (let i = start; i <= end; i++) nums.push(i);
+
+  return (
+    <div className="flex items-center justify-between px-5 py-3 border-t border-slate-200 bg-white rounded-b-xl">
+      <p className="text-sm text-slate-500">
+        {desde}–{hasta} de <span className="font-medium text-slate-700">{total}</span>
+      </p>
+      <div className="flex items-center gap-1">
+        <button
+          onClick={() => onPage(page - 1)}
+          disabled={page === 1}
+          className="p-1.5 rounded-lg border border-slate-200 disabled:opacity-40 hover:bg-slate-50 transition-colors"
+        >
+          <ChevronLeftIcon className="w-4 h-4 text-slate-600" />
+        </button>
+        {nums.map(n => (
+          <button
+            key={n}
+            onClick={() => onPage(n)}
+            className={`min-w-[32px] h-8 text-sm rounded-lg border transition-colors ${
+              n === page
+                ? 'bg-blue-600 text-white border-blue-600 font-medium'
+                : 'border-slate-200 text-slate-600 hover:bg-slate-50'
+            }`}
+          >
+            {n}
+          </button>
+        ))}
+        <button
+          onClick={() => onPage(page + 1)}
+          disabled={page === pages}
+          className="p-1.5 rounded-lg border border-slate-200 disabled:opacity-40 hover:bg-slate-50 transition-colors"
+        >
+          <ChevronRightIcon className="w-4 h-4 text-slate-600" />
+        </button>
+      </div>
+    </div>
+  );
+};
 
 const ProductoDetalleModal: React.FC<{
   producto: ProductoStock | null;
@@ -206,6 +265,12 @@ const Stock: React.FC = () => {
   
   // Lista de usuarios para el filtro
   const [usuarios, setUsuarios] = useState<any[]>([]);
+
+  // Paginación
+  const [pageProductos, setPageProductos] = useState(1);
+  const [pageMovimientos, setPageMovimientos] = useState(1);
+  const [paginacionProductos, setPaginacionProductos] = useState({ total: 0, pages: 1 });
+  const [paginacionMovimientos, setPaginacionMovimientos] = useState({ total: 0, pages: 1 });
   
   // Estados para redimensionamiento de columnas
   const [columnWidths, setColumnWidths] = useState<Record<string, number>>({
@@ -240,17 +305,17 @@ const Stock: React.FC = () => {
     cargarDatos();
   }, []);
 
-  // Recargar movimientos cuando cambien los filtros
+  // Recargar movimientos cuando cambien los filtros (siempre desde página 1)
   useEffect(() => {
     if (vistaActual === 'movimientos') {
-      cargarMovimientosFiltrados();
+      cargarMovimientosFiltrados(1);
     }
   }, [filtrosMovimientos, vistaActual]);
 
-  // Recargar productos cuando cambien los filtros
+  // Recargar productos cuando cambien los filtros (siempre desde página 1)
   useEffect(() => {
     if (vistaActual === 'productos') {
-      cargarProductosFiltrados();
+      cargarProductosFiltrados(1);
     }
   }, [busqueda, filtros, vistaActual]);
 
@@ -282,32 +347,24 @@ const Stock: React.FC = () => {
     }
   };
 
-  const cargarProductosFiltrados = async () => {
+  const cargarProductosFiltrados = async (pageNum = 1) => {
     try {
       setLoading(true);
-      const parametros: any = { limit: 50 };
-      
-      if (busqueda) {
-        parametros.buscar = busqueda;
-      }
-      if (filtros.categoria) {
-        parametros.categoria = filtros.categoria;
-      }
-      if (filtros.ubicacion) {
-        parametros.ubicacion = filtros.ubicacion;
-      }
-      if (filtros.estado) {
-        parametros.estado = filtros.estado;
-      }
-      if (filtros.stockBajo) {
-        parametros.stockBajo = 'true';
-      }
-      if (filtros.stockAgotado) {
-        parametros.stockAgotado = 'true';
-      }
+      const parametros: any = { limit: LIMIT, page: pageNum };
+      if (busqueda) parametros.buscar = busqueda;
+      if (filtros.categoria) parametros.categoria = filtros.categoria;
+      if (filtros.ubicacion) parametros.ubicacion = filtros.ubicacion;
+      if (filtros.estado) parametros.estado = filtros.estado;
+      if (filtros.stockBajo) parametros.stockBajo = 'true';
+      if (filtros.stockAgotado) parametros.stockAgotado = 'true';
 
-      const productosData = await obtenerProductos(parametros);
-      setProductos(productosData.productos);
+      const data = await obtenerProductos(parametros);
+      setProductos(data.productos);
+      setPaginacionProductos({
+        total: data.pagination?.total ?? data.productos.length,
+        pages: data.pagination?.pages ?? 1,
+      });
+      setPageProductos(pageNum);
     } catch (error) {
       console.error('Error al cargar productos filtrados:', error);
     } finally {
@@ -315,29 +372,23 @@ const Stock: React.FC = () => {
     }
   };
 
-  const cargarMovimientosFiltrados = async () => {
+  const cargarMovimientosFiltrados = async (pageNum = 1) => {
     try {
       setLoading(true);
-      const parametros: any = { limit: 50 };
-      
-      if (filtrosMovimientos.buscar) {
-        parametros.buscar = filtrosMovimientos.buscar;
-      }
-      if (filtrosMovimientos.tipoMovimiento) {
-        parametros.tipoMovimiento = filtrosMovimientos.tipoMovimiento;
-      }
-      if (filtrosMovimientos.fechaInicio) {
-        parametros.fechaInicio = filtrosMovimientos.fechaInicio;
-      }
-      if (filtrosMovimientos.fechaFin) {
-        parametros.fechaFin = filtrosMovimientos.fechaFin;
-      }
-      if (filtrosMovimientos.realizadoPorId) {
-        parametros.realizadoPorId = parseInt(filtrosMovimientos.realizadoPorId);
-      }
+      const parametros: any = { limit: LIMIT, page: pageNum };
+      if (filtrosMovimientos.buscar) parametros.buscar = filtrosMovimientos.buscar;
+      if (filtrosMovimientos.tipoMovimiento) parametros.tipoMovimiento = filtrosMovimientos.tipoMovimiento;
+      if (filtrosMovimientos.fechaInicio) parametros.fechaInicio = filtrosMovimientos.fechaInicio;
+      if (filtrosMovimientos.fechaFin) parametros.fechaFin = filtrosMovimientos.fechaFin;
+      if (filtrosMovimientos.realizadoPorId) parametros.realizadoPorId = parseInt(filtrosMovimientos.realizadoPorId);
 
-      const movimientosData = await obtenerMovimientos(parametros);
-      setMovimientos(movimientosData.movimientos);
+      const data = await obtenerMovimientos(parametros);
+      setMovimientos(data.movimientos);
+      setPaginacionMovimientos({
+        total: data.pagination?.total ?? data.movimientos.length,
+        pages: data.pagination?.pages ?? 1,
+      });
+      setPageMovimientos(pageNum);
     } catch (error) {
       console.error('Error al cargar movimientos filtrados:', error);
     } finally {
@@ -638,6 +689,14 @@ const Stock: React.FC = () => {
           <p className="text-sm text-slate-500 mt-0.5">Gestión de inventario — Departamento de Sistemas</p>
         </div>
         <div className="flex space-x-3">
+          <button
+            onClick={cargarDatos}
+            className="btn-secondary flex items-center"
+            title="Recargar datos"
+          >
+            <ArrowPathIcon className="w-4 h-4 mr-2" />
+            Actualizar
+          </button>
           <button onClick={exportarCSV} className="btn-secondary flex items-center">
             <DocumentArrowDownIcon className="w-4 h-4 mr-2" />
             Exportar CSV
@@ -818,7 +877,7 @@ const Stock: React.FC = () => {
                     placeholder="Buscar productos..."
                     value={busqueda}
                     onChange={(e) => setBusqueda(e.target.value)}
-                    className="pl-10 pr-4 py-2 w-full border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="input pl-10"
                   />
                 </div>
               </div>
@@ -826,7 +885,7 @@ const Stock: React.FC = () => {
                 <select 
                   value={filtros.categoria}
                   onChange={(e) => setFiltros({...filtros, categoria: e.target.value})}
-                  className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="input"
                 >
                   <option value="">Todas las categorías</option>
                   {dashboard?.distribucion.porCategoria.map((cat) => (
@@ -836,7 +895,7 @@ const Stock: React.FC = () => {
                 <select 
                   value={filtros.estado}
                   onChange={(e) => setFiltros({...filtros, estado: e.target.value})}
-                  className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="input"
                 >
                   <option value="">Todos los estados</option>
                   <option value="Activo">Activo</option>
@@ -854,7 +913,7 @@ const Stock: React.FC = () => {
                 </label>
                 <button
                   onClick={limpiarFiltrosProductos}
-                  className="px-3 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm"
+                  className="btn-secondary btn-sm"
                 >
                   Limpiar
                 </button>
@@ -863,7 +922,7 @@ const Stock: React.FC = () => {
           </div>
 
           {/* Tabla de productos */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden rounded-b-none">
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
@@ -973,6 +1032,12 @@ const Stock: React.FC = () => {
                 </tbody>
               </table>
             </div>
+            <Paginacion
+              page={pageProductos}
+              pages={paginacionProductos.pages}
+              total={paginacionProductos.total}
+              onPage={cargarProductosFiltrados}
+            />
           </div>
         </div>
       )}
@@ -991,7 +1056,7 @@ const Stock: React.FC = () => {
                     placeholder="Buscar por producto o número..."
                     value={filtrosMovimientos.buscar}
                     onChange={(e) => setFiltrosMovimientos({...filtrosMovimientos, buscar: e.target.value})}
-                    className="pl-10 pr-4 py-2 w-full border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="input pl-10"
                   />
                 </div>
               </div>
@@ -999,7 +1064,7 @@ const Stock: React.FC = () => {
                 <select 
                   value={filtrosMovimientos.tipoMovimiento}
                   onChange={(e) => setFiltrosMovimientos({...filtrosMovimientos, tipoMovimiento: e.target.value})}
-                  className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="input"
                 >
                   <option value="">Todos los tipos</option>
                   <option value="Ingreso">Ingreso</option>
@@ -1012,20 +1077,20 @@ const Stock: React.FC = () => {
                   type="date"
                   value={filtrosMovimientos.fechaInicio}
                   onChange={(e) => setFiltrosMovimientos({...filtrosMovimientos, fechaInicio: e.target.value})}
-                  className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="input"
                   placeholder="Fecha desde"
                 />
                 <input
                   type="date"
                   value={filtrosMovimientos.fechaFin}
                   onChange={(e) => setFiltrosMovimientos({...filtrosMovimientos, fechaFin: e.target.value})}
-                  className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="input"
                   placeholder="Fecha hasta"
                 />
                 <select
                   value={filtrosMovimientos.realizadoPorId}
                   onChange={(e) => setFiltrosMovimientos({...filtrosMovimientos, realizadoPorId: e.target.value})}
-                  className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="input"
                 >
                   <option value="">Todos los usuarios</option>
                   {usuarios.map(usuario => (
@@ -1036,7 +1101,7 @@ const Stock: React.FC = () => {
                 </select>
                 <button
                   onClick={limpiarFiltrosMovimientos}
-                  className="px-3 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm"
+                  className="btn-secondary btn-sm"
                 >
                   Limpiar
                 </button>
@@ -1235,6 +1300,12 @@ const Stock: React.FC = () => {
                 </tbody>
               </table>
             </div>
+            <Paginacion
+              page={pageMovimientos}
+              pages={paginacionMovimientos.pages}
+              total={paginacionMovimientos.total}
+              onPage={cargarMovimientosFiltrados}
+            />
           </div>
         </div>
       )}
