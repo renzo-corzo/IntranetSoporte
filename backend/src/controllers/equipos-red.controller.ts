@@ -98,10 +98,13 @@ export const crearEquipoRed = async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'El nombre y el tipo son obligatorios' });
     }
 
+    // Normalizar serie vacía a null para no violar el unique constraint
+    const serieNorm = serie?.trim() || null;
+
     // Verificar si la serie ya existe (si se proporciona)
-    if (serie) {
-      const existeSerie = await prisma.equipoRed.findUnique({
-        where: { serie }
+    if (serieNorm) {
+      const existeSerie = await prisma.equipoRed.findFirst({
+        where: { serie: serieNorm }
       });
 
       if (existeSerie) {
@@ -113,17 +116,17 @@ export const crearEquipoRed = async (req: Request, res: Response) => {
       data: {
         nombre,
         tipo,
-        ip,
-        ubicacion,
-        serie,
-        fabricante,
-        modelo,
-        estado: estado || 'PRODUCCION',
-        fechaAlta: fechaAlta ? new Date(fechaAlta) : new Date(),
-        fechaBaja: fechaBaja ? new Date(fechaBaja) : null,
-        notasTecnicas,
-        firmware,
-        puertos: puertos ? Number(puertos) : null
+        ip:           ip           || null,
+        ubicacion:    ubicacion     || null,
+        serie:        serieNorm,
+        fabricante:   fabricante    || null,
+        modelo:       modelo        || null,
+        estado:       estado        || 'PRODUCCION',
+        fechaAlta:    fechaAlta     ? new Date(fechaAlta) : new Date(),
+        fechaBaja:    fechaBaja     ? new Date(fechaBaja) : null,
+        notasTecnicas: notasTecnicas || null,
+        firmware:     firmware      || null,
+        puertos:      puertos       ? Number(puertos) : null
       }
     });
 
@@ -179,17 +182,17 @@ export const actualizarEquipoRed = async (req: Request, res: Response) => {
       data: {
         nombre,
         tipo,
-        ip,
-        ubicacion,
-        serie,
-        fabricante,
-        modelo,
+        ip:            ip            || null,
+        ubicacion:     ubicacion      || null,
+        serie:         serie          || null,
+        fabricante:    fabricante     || null,
+        modelo:        modelo         || null,
         estado,
-        fechaAlta: fechaAlta ? new Date(fechaAlta) : undefined,
-        fechaBaja: fechaBaja ? new Date(fechaBaja) : null,
-        notasTecnicas,
-        firmware,
-        puertos: puertos ? Number(puertos) : null
+        fechaAlta:     fechaAlta      ? new Date(fechaAlta) : undefined,
+        fechaBaja:     fechaBaja      ? new Date(fechaBaja) : null,
+        notasTecnicas: notasTecnicas  || null,
+        firmware:      firmware       || null,
+        puertos:       puertos        ? Number(puertos) : null
       }
     });
 
