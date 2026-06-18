@@ -6,11 +6,12 @@ import prisma from '../lib/prisma';
 export const obtenerEquiposRed = async (req: Request, res: Response) => {
   try {
     const { estado, tipo, buscar, page = 1, limit = 50 } = req.query;
+    const empresaId = (req as any).empresaId;
 
     const skip = (Number(page) - 1) * Number(limit);
     const take = Number(limit);
 
-    const where: any = {};
+    const where: any = { empresaId };
 
     if (estado) {
       where.estado = estado;
@@ -58,12 +59,13 @@ export const obtenerEquiposRed = async (req: Request, res: Response) => {
 export const obtenerEquipoRedPorId = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
+    const empresaId = (req as any).empresaId;
 
     const equipo = await prisma.equipoRed.findUnique({
       where: { id }
     });
 
-    if (!equipo) {
+    if (!equipo || equipo.empresaId !== empresaId) {
       return res.status(404).json({ error: 'Equipo de red no encontrado' });
     }
 
@@ -77,6 +79,7 @@ export const obtenerEquipoRedPorId = async (req: Request, res: Response) => {
 // Crear equipo de red
 export const crearEquipoRed = async (req: Request, res: Response) => {
   try {
+    const empresaId = (req as any).empresaId;
     const {
       nombre,
       tipo,
@@ -101,10 +104,10 @@ export const crearEquipoRed = async (req: Request, res: Response) => {
     // Normalizar serie vacía a null para no violar el unique constraint
     const serieNorm = serie?.trim() || null;
 
-    // Verificar si la serie ya existe (si se proporciona)
+    // Verificar si la serie ya existe en este cliente (si se proporciona)
     if (serieNorm) {
       const existeSerie = await prisma.equipoRed.findFirst({
-        where: { serie: serieNorm }
+        where: { empresaId, serie: serieNorm }
       });
 
       if (existeSerie) {
@@ -114,6 +117,7 @@ export const crearEquipoRed = async (req: Request, res: Response) => {
 
     const equipo = await prisma.equipoRed.create({
       data: {
+        empresaId,
         nombre,
         tipo,
         ip:           ip           || null,
@@ -141,6 +145,7 @@ export const crearEquipoRed = async (req: Request, res: Response) => {
 export const actualizarEquipoRed = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
+    const empresaId = (req as any).empresaId;
     const {
       nombre,
       tipo,
@@ -162,14 +167,17 @@ export const actualizarEquipoRed = async (req: Request, res: Response) => {
       where: { id }
     });
 
-    if (!equipoExistente) {
+    if (!equipoExistente || equipoExistente.empresaId !== empresaId) {
       return res.status(404).json({ error: 'Equipo de red no encontrado' });
     }
 
-    // Si se cambia la serie, verificar que no exista otra con esa serie
-    if (serie && serie !== equipoExistente.serie) {
-      const existeSerie = await prisma.equipoRed.findUnique({
-        where: { serie }
+    // Normalizar serie vacía a null para no violar el unique constraint
+    const serieNorm = serie?.trim() || null;
+
+    // Si se cambia la serie, verificar que no exista otra con esa serie en este cliente
+    if (serieNorm && serieNorm !== equipoExistente.serie) {
+      const existeSerie = await prisma.equipoRed.findFirst({
+        where: { empresaId, serie: serieNorm }
       });
 
       if (existeSerie) {
@@ -184,7 +192,7 @@ export const actualizarEquipoRed = async (req: Request, res: Response) => {
         tipo,
         ip:            ip            || null,
         ubicacion:     ubicacion      || null,
-        serie:         serie          || null,
+        serie:         serieNorm,
         fabricante:    fabricante     || null,
         modelo:        modelo         || null,
         estado,
@@ -207,13 +215,14 @@ export const actualizarEquipoRed = async (req: Request, res: Response) => {
 export const eliminarEquipoRed = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
+    const empresaId = (req as any).empresaId;
 
     // Verificar que el equipo existe
     const equipo = await prisma.equipoRed.findUnique({
       where: { id }
     });
 
-    if (!equipo) {
+    if (!equipo || equipo.empresaId !== empresaId) {
       return res.status(404).json({ error: 'Equipo de red no encontrado' });
     }
 
@@ -227,4 +236,3 @@ export const eliminarEquipoRed = async (req: Request, res: Response) => {
     res.status(500).json({ error: 'Error interno del servidor' });
   }
 };
-

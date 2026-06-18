@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from "react";
 import { NavLink, Outlet, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import EmpresaSwitcher from "../components/EmpresaSwitcher";
 import {
   HomeIcon,
   ClipboardDocumentListIcon,
@@ -11,6 +12,7 @@ import {
   ClipboardDocumentCheckIcon,
   CalendarDaysIcon,
   ServerIcon,
+  BuildingOfficeIcon,
   Bars3Icon,
   ArrowRightOnRectangleIcon,
   UserGroupIcon,
@@ -42,6 +44,7 @@ const ROUTE_LABELS: Record<string, string> = {
   links: "Links Útiles",
   stock: "Stock",
   cmdb: "CMDB",
+  empresas: "Clientes",
   tareas: "Tareas",
   procedimientos: "Procedimientos",
   admin: "Administración",
@@ -152,6 +155,27 @@ const Dashboard: React.FC = () => {
               )}
             </NavLink>
           )}
+
+          {user?.rol === "admin" && (
+            <NavLink
+              to="/dashboard/empresas"
+              title={isCollapsed ? "Clientes" : undefined}
+              className={({ isActive }) =>
+                `flex items-center py-2.5 rounded-lg transition-colors duration-150 ${
+                  isCollapsed ? "justify-center px-2" : "px-3 gap-3"
+                } ${
+                  isActive
+                    ? "bg-blue-600 text-white shadow-sm"
+                    : "text-slate-300 hover:bg-slate-800 hover:text-white"
+                }`
+              }
+            >
+              <BuildingOfficeIcon className="w-5 h-5 flex-shrink-0" />
+              {!isCollapsed && (
+                <span className="text-sm font-medium">Clientes</span>
+              )}
+            </NavLink>
+          )}
         </nav>
 
         {/* User / Logout */}
@@ -210,8 +234,11 @@ const Dashboard: React.FC = () => {
             ))}
           </nav>
 
-          {/* User chip */}
-          <div className="ml-auto flex items-center gap-2.5 flex-shrink-0">
+          <div className="ml-auto flex items-center gap-3 flex-shrink-0">
+            <EmpresaSwitcher />
+
+            {/* User chip */}
+            <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center shadow-sm">
               <span className="text-white text-xs font-semibold">{initials}</span>
             </div>
@@ -220,6 +247,7 @@ const Dashboard: React.FC = () => {
                 {user?.nombre}
               </p>
               <p className="text-xs text-slate-400 capitalize">{user?.rol}</p>
+            </div>
             </div>
           </div>
         </header>

@@ -22,11 +22,12 @@ const ServicioForm: React.FC<Props> = ({ servicio, onClose, onSuccess }) => {
     tipo: 'OTRO' as Servicio['tipo'],
     version: '',
     puerto: '',
+    ssid: '',
     estado: 'PRODUCCION' as const,
     fechaAlta: new Date().toISOString().split('T')[0],
     fechaBaja: '',
     notasTecnicas: '',
-    tipoEquipo: 'SERVIDOR_FISICO' as Servicio['tipoEquipo'],
+    tipoEquipo: 'SERVIDOR_FISICO' as Servicio['tipoEquipo'] | '',
     servidorFisicoId: '',
     maquinaVirtualId: ''
   });
@@ -50,11 +51,12 @@ const ServicioForm: React.FC<Props> = ({ servicio, onClose, onSuccess }) => {
         tipo: servicio.tipo,
         version: servicio.version || '',
         puerto: servicio.puerto?.toString() || '',
+        ssid: servicio.ssid || '',
         estado: servicio.estado,
         fechaAlta: servicio.fechaAlta ? new Date(servicio.fechaAlta).toISOString().split('T')[0] : '',
         fechaBaja: servicio.fechaBaja ? new Date(servicio.fechaBaja).toISOString().split('T')[0] : '',
         notasTecnicas: servicio.notasTecnicas || '',
-        tipoEquipo: servicio.tipoEquipo,
+        tipoEquipo: servicio.tipoEquipo || '',
         servidorFisicoId: servicio.servidorFisicoId || '',
         maquinaVirtualId: servicio.maquinaVirtualId || ''
       });
@@ -74,11 +76,12 @@ const ServicioForm: React.FC<Props> = ({ servicio, onClose, onSuccess }) => {
         tipo: formData.tipo,
         version: formData.version || null,
         puerto: formData.puerto ? Number(formData.puerto) : null,
+        ssid: formData.tipo === 'WIFI' ? (formData.ssid || null) : null,
         estado: formData.estado,
         fechaAlta: formData.fechaAlta,
         fechaBaja: formData.fechaBaja || null,
         notasTecnicas: formData.notasTecnicas || null,
-        tipoEquipo: formData.tipoEquipo,
+        tipoEquipo: formData.tipoEquipo || null,
         servidorFisicoId: formData.tipoEquipo === 'SERVIDOR_FISICO' ? formData.servidorFisicoId || null : null,
         maquinaVirtualId: formData.tipoEquipo === 'MAQUINA_VIRTUAL' ? formData.maquinaVirtualId || null : null
       };
@@ -137,7 +140,15 @@ const ServicioForm: React.FC<Props> = ({ servicio, onClose, onSuccess }) => {
               <select
                 required
                 value={formData.tipo}
-                onChange={(e) => setFormData({ ...formData, tipo: e.target.value as Servicio['tipo'] })}
+                onChange={(e) => {
+                  const nuevoTipo = e.target.value as Servicio['tipo'];
+                  setFormData({
+                    ...formData,
+                    tipo: nuevoTipo,
+                    // Al elegir WiFi, lo independizamos de servidor/VM por defecto
+                    tipoEquipo: nuevoTipo === 'WIFI' ? '' : formData.tipoEquipo
+                  });
+                }}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
               >
                 <option value="SQL">SQL Server</option>
@@ -155,29 +166,52 @@ const ServicioForm: React.FC<Props> = ({ servicio, onClose, onSuccess }) => {
                 <option value="VEEAM">Veeam</option>
                 <option value="VMWARE">VMware</option>
                 <option value="HYPER_V">Hyper-V</option>
+                <option value="WIFI">WiFi</option>
                 <option value="OTRO">Otro</option>
               </select>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Versión</label>
-              <input
-                type="text"
-                value={formData.version}
-                onChange={(e) => setFormData({ ...formData, version: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Puerto</label>
-              <input
-                type="number"
-                value={formData.puerto}
-                onChange={(e) => setFormData({ ...formData, puerto: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
+            {formData.tipo === 'WIFI' ? (
+              <>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">SSID (nombre de la red)</label>
+                  <input
+                    type="text"
+                    value={formData.ssid}
+                    onChange={(e) => setFormData({ ...formData, ssid: e.target.value })}
+                    placeholder="Ej: CajaAbogados-Visitas"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <div className="md:col-span-2 -mt-2">
+                  <p className="text-sm text-blue-700 bg-blue-50 border border-blue-200 rounded-lg px-3 py-2">
+                    🔑 La clave de la red WiFi no se guarda aquí — después de crear el servicio, usá el botón
+                    "Credenciales" en la lista de Servicios para agregarla cifrada.
+                  </p>
+                </div>
+              </>
+            ) : (
+              <>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Versión</label>
+                  <input
+                    type="text"
+                    value={formData.version}
+                    onChange={(e) => setFormData({ ...formData, version: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Puerto</label>
+                  <input
+                    type="number"
+                    value={formData.puerto}
+                    onChange={(e) => setFormData({ ...formData, puerto: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+              </>
+            )}
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Estado</label>
@@ -195,29 +229,30 @@ const ServicioForm: React.FC<Props> = ({ servicio, onClose, onSuccess }) => {
 
             <div className="md:col-span-2">
               <h3 className="text-lg font-semibold text-gray-700 mb-4">Equipo</h3>
+              <p className="text-sm text-gray-500 -mt-3 mb-2">Opcional — un servicio puede ser independiente (ej: WiFi)</p>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Tipo de Equipo *</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Tipo de Equipo</label>
               <select
-                required
                 value={formData.tipoEquipo}
                 onChange={(e) => {
-                  setFormData({ 
-                    ...formData, 
-                    tipoEquipo: e.target.value as Servicio['tipoEquipo'],
+                  setFormData({
+                    ...formData,
+                    tipoEquipo: e.target.value as Servicio['tipoEquipo'] | '',
                     servidorFisicoId: '',
                     maquinaVirtualId: ''
                   });
                 }}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
               >
+                <option value="">Ninguno (servicio independiente)</option>
                 <option value="SERVIDOR_FISICO">Servidor Físico</option>
                 <option value="MAQUINA_VIRTUAL">Máquina Virtual</option>
               </select>
             </div>
 
-            {formData.tipoEquipo === 'SERVIDOR_FISICO' ? (
+            {formData.tipoEquipo === 'SERVIDOR_FISICO' && (
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Servidor Físico *</label>
                 <select
@@ -232,7 +267,9 @@ const ServicioForm: React.FC<Props> = ({ servicio, onClose, onSuccess }) => {
                   ))}
                 </select>
               </div>
-            ) : (
+            )}
+
+            {formData.tipoEquipo === 'MAQUINA_VIRTUAL' && (
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Máquina Virtual *</label>
                 <select

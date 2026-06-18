@@ -9,10 +9,12 @@ import {
   buscarCoincidencias
 } from '../controllers/cmdb-zabbix.controller';
 import { verifyToken, requirePermission } from '../middlewares/auth.middleware';
+import { requireEmpresa } from '../middlewares/empresa.middleware';
 
 const router = Router();
 
 router.use(verifyToken);
+router.use(requireEmpresa);
 
 // 📌 Rutas: /api/cmdb/dashboard
 router.get('/stats', requirePermission(['cmdb:read', 'cmdb:manage']), getDashboardStats);

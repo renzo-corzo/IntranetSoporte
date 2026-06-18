@@ -6,11 +6,12 @@ import prisma from '../lib/prisma';
 export const obtenerEquiposUsuario = async (req: Request, res: Response) => {
   try {
     const { estado, tipo, usuarioId, area, buscar, page = 1, limit = 50 } = req.query;
+    const empresaId = (req as any).empresaId;
 
     const skip = (Number(page) - 1) * Number(limit);
     const take = Number(limit);
 
-    const where: any = {};
+    const where: any = { empresaId };
 
     if (estado) {
       where.estado = estado;
@@ -70,6 +71,7 @@ export const obtenerEquiposUsuario = async (req: Request, res: Response) => {
 export const obtenerEquipoUsuarioPorId = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
+    const empresaId = (req as any).empresaId;
 
     const equipo = await prisma.equipoUsuario.findUnique({
       where: { id },
@@ -78,7 +80,7 @@ export const obtenerEquipoUsuarioPorId = async (req: Request, res: Response) => 
       }
     });
 
-    if (!equipo) {
+    if (!equipo || equipo.empresaId !== empresaId) {
       return res.status(404).json({ error: 'Equipo de usuario no encontrado' });
     }
 
@@ -92,6 +94,7 @@ export const obtenerEquipoUsuarioPorId = async (req: Request, res: Response) => 
 // Crear equipo de usuario
 export const crearEquipoUsuario = async (req: Request, res: Response) => {
   try {
+    const empresaId = (req as any).empresaId;
     const {
       nombre,
       tipo,
@@ -114,10 +117,13 @@ export const crearEquipoUsuario = async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'El nombre y el tipo son obligatorios' });
     }
 
-    // Verificar si la serie ya existe (si se proporciona)
-    if (serie) {
-      const existeSerie = await prisma.equipoUsuario.findUnique({
-        where: { serie }
+    // Normalizar serie vacía a null para no violar el unique constraint
+    const serieNorm = serie?.trim() || null;
+
+    // Verificar si la serie ya existe en este cliente (si se proporciona)
+    if (serieNorm) {
+      const existeSerie = await prisma.equipoUsuario.findFirst({
+        where: { empresaId, serie: serieNorm }
       });
 
       if (existeSerie) {
@@ -138,11 +144,12 @@ export const crearEquipoUsuario = async (req: Request, res: Response) => {
 
     const equipo = await prisma.equipoUsuario.create({
       data: {
+        empresaId,
         nombre,
         tipo,
         ip,
         ubicacion,
-        serie,
+        serie: serieNorm,
         fabricante,
         modelo,
         estado: estado || 'PRODUCCION',
@@ -169,6 +176,7 @@ export const crearEquipoUsuario = async (req: Request, res: Response) => {
 export const actualizarEquipoUsuario = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
+    const empresaId = (req as any).empresaId;
     const {
       nombre,
       tipo,
@@ -191,14 +199,17 @@ export const actualizarEquipoUsuario = async (req: Request, res: Response) => {
       where: { id }
     });
 
-    if (!equipoExistente) {
+    if (!equipoExistente || equipoExistente.empresaId !== empresaId) {
       return res.status(404).json({ error: 'Equipo de usuario no encontrado' });
     }
 
-    // Si se cambia la serie, verificar que no exista otra con esa serie
-    if (serie && serie !== equipoExistente.serie) {
-      const existeSerie = await prisma.equipoUsuario.findUnique({
-        where: { serie }
+    // Normalizar serie vacía a null para no violar el unique constraint
+    const serieNorm = serie?.trim() || null;
+
+    // Si se cambia la serie, verificar que no exista otra con esa serie en este cliente
+    if (serieNorm && serieNorm !== equipoExistente.serie) {
+      const existeSerie = await prisma.equipoUsuario.findFirst({
+        where: { empresaId, serie: serieNorm }
       });
 
       if (existeSerie) {
@@ -224,7 +235,7 @@ export const actualizarEquipoUsuario = async (req: Request, res: Response) => {
         tipo,
         ip,
         ubicacion,
-        serie,
+        serie: serieNorm,
         fabricante,
         modelo,
         estado,
@@ -251,13 +262,14 @@ export const actualizarEquipoUsuario = async (req: Request, res: Response) => {
 export const eliminarEquipoUsuario = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
+    const empresaId = (req as any).empresaId;
 
     // Verificar que el equipo existe
     const equipo = await prisma.equipoUsuario.findUnique({
       where: { id }
     });
 
-    if (!equipo) {
+    if (!equipo || equipo.empresaId !== empresaId) {
       return res.status(404).json({ error: 'Equipo de usuario no encontrado' });
     }
 
@@ -271,4 +283,3 @@ export const eliminarEquipoUsuario = async (req: Request, res: Response) => {
     res.status(500).json({ error: 'Error interno del servidor' });
   }
 };
-

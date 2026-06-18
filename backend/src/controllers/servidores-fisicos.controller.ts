@@ -6,11 +6,12 @@ import prisma from '../lib/prisma';
 export const obtenerServidoresFisicos = async (req: Request, res: Response) => {
   try {
     const { estado, buscar, page = 1, limit = 50 } = req.query;
+    const empresaId = (req as any).empresaId;
 
     const skip = (Number(page) - 1) * Number(limit);
     const take = Number(limit);
 
-    const where: any = {};
+    const where: any = { empresaId };
 
     if (estado) {
       where.estado = estado;
@@ -63,6 +64,7 @@ export const obtenerServidoresFisicos = async (req: Request, res: Response) => {
 export const obtenerServidorFisicoPorId = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
+    const empresaId = (req as any).empresaId;
 
     const servidor = await prisma.servidorFisico.findUnique({
       where: { id },
@@ -72,7 +74,7 @@ export const obtenerServidorFisicoPorId = async (req: Request, res: Response) =>
       }
     });
 
-    if (!servidor) {
+    if (!servidor || servidor.empresaId !== empresaId) {
       return res.status(404).json({ error: 'Servidor físico no encontrado' });
     }
 
@@ -86,6 +88,7 @@ export const obtenerServidorFisicoPorId = async (req: Request, res: Response) =>
 // Crear servidor físico
 export const crearServidorFisico = async (req: Request, res: Response) => {
   try {
+    const empresaId = (req as any).empresaId;
     const {
       nombre,
       ip,
@@ -113,10 +116,10 @@ export const crearServidorFisico = async (req: Request, res: Response) => {
     // Normalizar serie vacía a null
     const serieNormalizada = serie && serie.trim() !== '' ? serie.trim() : null;
 
-    // Verificar si la serie ya existe (si se proporciona)
+    // Verificar si la serie ya existe en este cliente (si se proporciona)
     if (serieNormalizada) {
-      const existeSerie = await prisma.servidorFisico.findUnique({
-        where: { serie }
+      const existeSerie = await prisma.servidorFisico.findFirst({
+        where: { empresaId, serie: serieNormalizada }
       });
 
       if (existeSerie) {
@@ -126,11 +129,12 @@ export const crearServidorFisico = async (req: Request, res: Response) => {
 
     const servidor = await prisma.servidorFisico.create({
       data: {
+        empresaId,
         nombre,
         ip,
         rol,
         ubicacion,
-        serie,
+        serie: serieNormalizada,
         garantia: garantia ? new Date(garantia) : null,
         estado: estado || 'PRODUCCION',
         fechaAlta: fechaAlta ? new Date(fechaAlta) : new Date(),
@@ -160,6 +164,7 @@ export const crearServidorFisico = async (req: Request, res: Response) => {
 export const actualizarServidorFisico = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
+    const empresaId = (req as any).empresaId;
     const {
       nombre,
       ip,
@@ -184,17 +189,17 @@ export const actualizarServidorFisico = async (req: Request, res: Response) => {
       where: { id }
     });
 
-    if (!servidorExistente) {
+    if (!servidorExistente || servidorExistente.empresaId !== empresaId) {
       return res.status(404).json({ error: 'Servidor físico no encontrado' });
     }
 
     // Normalizar serie vacía a null para evitar conflicto de unicidad
     const serieNormalizada = serie && serie.trim() !== '' ? serie.trim() : null;
 
-    // Si se cambia la serie, verificar que no exista otra con esa serie
+    // Si se cambia la serie, verificar que no exista otra con esa serie en este cliente
     if (serieNormalizada && serieNormalizada !== servidorExistente.serie) {
-      const existeSerie = await prisma.servidorFisico.findUnique({
-        where: { serie: serieNormalizada }
+      const existeSerie = await prisma.servidorFisico.findFirst({
+        where: { empresaId, serie: serieNormalizada }
       });
 
       if (existeSerie) {
@@ -239,6 +244,7 @@ export const actualizarServidorFisico = async (req: Request, res: Response) => {
 export const eliminarServidorFisico = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
+    const empresaId = (req as any).empresaId;
 
     // Verificar que el servidor existe
     const servidor = await prisma.servidorFisico.findUnique({
@@ -249,7 +255,7 @@ export const eliminarServidorFisico = async (req: Request, res: Response) => {
       }
     });
 
-    if (!servidor) {
+    if (!servidor || servidor.empresaId !== empresaId) {
       return res.status(404).json({ error: 'Servidor físico no encontrado' });
     }
 

@@ -17,10 +17,12 @@ import {
   getComentariosTarea
 } from "../controllers/tarea.controller";
 import { verifyToken, requirePermission } from "../middlewares/auth.middleware";
+import { requireEmpresa } from "../middlewares/empresa.middleware";
 
 const router = Router();
 
 router.use(verifyToken);
+router.use(requireEmpresa);
 
 router.get("/kpis", requirePermission("tareas:read"), getTareasKpis);
 router.get("/tablero", requirePermission("tareas:read"), getTareasTablero);

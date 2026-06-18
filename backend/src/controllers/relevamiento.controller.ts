@@ -10,9 +10,11 @@ interface ItemInput {
   observaciones?: string;
 }
 
-export const getRelevamientos = async (_req: Request, res: Response) => {
+export const getRelevamientos = async (req: Request, res: Response) => {
   try {
+    const empresaId = (req as any).empresaId;
     const relevamientos = await prisma.relevamiento.findMany({
+      where: { empresaId },
       include: { items: true },
       orderBy: { fecha: 'desc' }
     });
@@ -25,11 +27,12 @@ export const getRelevamientos = async (_req: Request, res: Response) => {
 export const getRelevamientoById = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
+    const empresaId = (req as any).empresaId;
     const relevamiento = await prisma.relevamiento.findUnique({
       where: { id: Number(id) },
       include: { items: true }
     });
-    if (!relevamiento) return res.status(404).json({ error: "No encontrado" });
+    if (!relevamiento || relevamiento.empresaId !== empresaId) return res.status(404).json({ error: "No encontrado" });
     res.json(relevamiento);
   } catch (error) {
     res.status(500).json({ error: "Error al obtener relevamiento" });
@@ -40,6 +43,7 @@ export const createRelevamiento = async (req: Request, res: Response) => {
   try {
     const { fecha, responsable, ubicacion, observaciones, items } = req.body;
     const usuarioId = (req as any).user.id;
+    const empresaId = (req as any).empresaId;
 
     if (!fecha || !responsable || !ubicacion) {
       return res.status(400).json({ error: "fecha, responsable y ubicacion son obligatorios" });
@@ -47,6 +51,7 @@ export const createRelevamiento = async (req: Request, res: Response) => {
 
     const relevamiento = await prisma.relevamiento.create({
       data: {
+        empresaId,
         fecha: new Date(fecha),
         responsable,
         ubicacion,
@@ -67,7 +72,11 @@ export const createRelevamiento = async (req: Request, res: Response) => {
 export const updateRelevamiento = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
+    const empresaId = (req as any).empresaId;
     const { fecha, responsable, ubicacion, observaciones, items } = req.body;
+
+    const existente = await prisma.relevamiento.findUnique({ where: { id: Number(id) } });
+    if (!existente || existente.empresaId !== empresaId) return res.status(404).json({ error: "No encontrado" });
 
     const resultado = await prisma.$transaction(async (tx) => {
       await tx.relevamiento.update({
@@ -102,6 +111,11 @@ export const updateRelevamiento = async (req: Request, res: Response) => {
 export const deleteRelevamiento = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
+    const empresaId = (req as any).empresaId;
+
+    const existente = await prisma.relevamiento.findUnique({ where: { id: Number(id) } });
+    if (!existente || existente.empresaId !== empresaId) return res.status(404).json({ error: "No encontrado" });
+
     // onDelete: Cascade en el schema elimina los items automáticamente
     await prisma.relevamiento.delete({ where: { id: Number(id) } });
     res.json({ message: "Relevamiento eliminado" });

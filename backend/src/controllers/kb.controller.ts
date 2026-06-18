@@ -4,9 +4,10 @@ import prisma from '../lib/prisma';
 // Categorías
 export const getCategorias = async (req: Request, res: Response) => {
   try {
+    const empresaId = (req as any).empresaId;
     const categorias = await prisma.categoria.findMany({
       include: { subcategorias: true },
-      where: { padreId: null },
+      where: { empresaId, padreId: null },
       orderBy: { nombre: 'asc' }
     });
     res.json(categorias);
@@ -17,11 +18,12 @@ export const getCategorias = async (req: Request, res: Response) => {
 
 export const getCategoriaById = async (req: Request, res: Response) => {
   try {
+    const empresaId = (req as any).empresaId;
     const categoria = await prisma.categoria.findUnique({
       where: { id: Number(req.params.id) },
       include: { subcategorias: true, articulos: true }
     });
-    if (!categoria) return res.status(404).json({ error: "Categoría no encontrada" });
+    if (!categoria || categoria.empresaId !== empresaId) return res.status(404).json({ error: "Categoría no encontrada" });
     res.json(categoria);
   } catch (err) {
     res.status(500).json({ error: "Error al obtener categoría" });
@@ -30,10 +32,11 @@ export const getCategoriaById = async (req: Request, res: Response) => {
 
 export const createCategoria = async (req: Request, res: Response) => {
   try {
+    const empresaId = (req as any).empresaId;
     const { nombre, descripcion, icono, categoriaPadreId } = req.body;
     if (!nombre) return res.status(400).json({ error: "El nombre es obligatorio" });
     const categoria = await prisma.categoria.create({
-      data: { nombre, descripcion, icono, padreId: categoriaPadreId || null }
+      data: { empresaId, nombre, descripcion, icono, padreId: categoriaPadreId || null }
     });
     res.status(201).json(categoria);
   } catch (err) {
@@ -43,7 +46,12 @@ export const createCategoria = async (req: Request, res: Response) => {
 
 export const updateCategoria = async (req: Request, res: Response) => {
   try {
+    const empresaId = (req as any).empresaId;
     const { nombre, descripcion, icono, categoriaPadreId } = req.body;
+
+    const existente = await prisma.categoria.findUnique({ where: { id: Number(req.params.id) } });
+    if (!existente || existente.empresaId !== empresaId) return res.status(404).json({ error: "Categoría no encontrada" });
+
     const categoria = await prisma.categoria.update({
       where: { id: Number(req.params.id) },
       data: { nombre, descripcion, icono, padreId: categoriaPadreId || null }
@@ -57,6 +65,13 @@ export const updateCategoria = async (req: Request, res: Response) => {
 export const deleteCategoria = async (req: Request, res: Response) => {
   try {
     const categoriaId = Number(req.params.id);
+    const empresaId = (req as any).empresaId;
+
+    const categoriaExistente = await prisma.categoria.findUnique({ where: { id: categoriaId } });
+    if (!categoriaExistente || categoriaExistente.empresaId !== empresaId) {
+      return res.status(404).json({ error: "Categoría no encontrada" });
+    }
+
     const articulosCount = await prisma.articulo.count({ where: { categoriaId } });
     if (articulosCount > 0) {
       return res.status(400).json({
@@ -84,8 +99,10 @@ export const deleteCategoria = async (req: Request, res: Response) => {
 // Artículos (Procedimientos)
 export const getArticulos = async (req: Request, res: Response) => {
   try {
+    const empresaId = (req as any).empresaId;
     const { categoriaId } = req.query;
-    const whereClause = categoriaId ? { categoriaId: Number(categoriaId) } : {};
+    const whereClause: any = { empresaId };
+    if (categoriaId) whereClause.categoriaId = Number(categoriaId);
     const articulos = await prisma.articulo.findMany({
       where: whereClause,
       include: { categoria: true, creadoPor: true },
@@ -99,11 +116,12 @@ export const getArticulos = async (req: Request, res: Response) => {
 
 export const getArticuloById = async (req: Request, res: Response) => {
   try {
+    const empresaId = (req as any).empresaId;
     const articulo = await prisma.articulo.findUnique({
       where: { id: Number(req.params.id) },
       include: { categoria: true, creadoPor: true }
     });
-    if (!articulo) return res.status(404).json({ error: "Artículo no encontrado" });
+    if (!articulo || articulo.empresaId !== empresaId) return res.status(404).json({ error: "Artículo no encontrado" });
     res.json(articulo);
   } catch (err) {
     res.status(500).json({ error: "Error al obtener artículo" });
@@ -112,10 +130,11 @@ export const getArticuloById = async (req: Request, res: Response) => {
 
 export const getNextCodigo = async (req: Request, res: Response) => {
   try {
+    const empresaId = (req as any).empresaId;
     const area = (req.query.area as string) || 'GEN';
     const prefix = `PRO-${area.toUpperCase().substring(0, 3)}-`;
     const articulos = await prisma.articulo.findMany({
-      where: { codigo: { startsWith: prefix } },
+      where: { empresaId, codigo: { startsWith: prefix } },
       select: { codigo: true }
     });
     let maxNum = 0;
@@ -134,11 +153,13 @@ export const createArticulo = async (req: Request, res: Response) => {
   try {
     const { titulo, contenido, categoriaId, adjuntos, codigo, version, area, responsable, estado, fechaRevision } = req.body;
     const creadoPorId = (req as any).user.id;
+    const empresaId = (req as any).empresaId;
     if (!titulo || !categoriaId) {
       return res.status(400).json({ error: "Faltan campos obligatorios: titulo y categoriaId" });
     }
     const articulo = await prisma.articulo.create({
       data: {
+        empresaId,
         titulo,
         contenido,
         categoriaId: Number(categoriaId),
@@ -161,7 +182,12 @@ export const createArticulo = async (req: Request, res: Response) => {
 
 export const updateArticulo = async (req: Request, res: Response) => {
   try {
+    const empresaId = (req as any).empresaId;
     const { titulo, contenido, categoriaId, adjuntos, codigo, version, area, responsable, estado, fechaRevision } = req.body;
+
+    const existente = await prisma.articulo.findUnique({ where: { id: Number(req.params.id) } });
+    if (!existente || existente.empresaId !== empresaId) return res.status(404).json({ error: "Artículo no encontrado" });
+
     const articulo = await prisma.articulo.update({
       where: { id: Number(req.params.id) },
       data: {
@@ -185,6 +211,10 @@ export const updateArticulo = async (req: Request, res: Response) => {
 
 export const deleteArticulo = async (req: Request, res: Response) => {
   try {
+    const empresaId = (req as any).empresaId;
+    const existente = await prisma.articulo.findUnique({ where: { id: Number(req.params.id) } });
+    if (!existente || existente.empresaId !== empresaId) return res.status(404).json({ error: "Artículo no encontrado" });
+
     await prisma.articulo.delete({ where: { id: Number(req.params.id) } });
     res.json({ message: "Artículo eliminado" });
   } catch (err) {
@@ -195,11 +225,12 @@ export const deleteArticulo = async (req: Request, res: Response) => {
 export const cleanAndDeleteCategoria = async (req: Request, res: Response) => {
   try {
     const categoriaId = Number(req.params.id);
+    const empresaId = (req as any).empresaId;
     const categoria = await prisma.categoria.findUnique({
       where: { id: categoriaId },
       include: { subcategorias: true, articulos: true }
     });
-    if (!categoria) return res.status(404).json({ error: "Categoría no encontrada" });
+    if (!categoria || categoria.empresaId !== empresaId) return res.status(404).json({ error: "Categoría no encontrada" });
     for (const sub of categoria.subcategorias) {
       await prisma.articulo.deleteMany({ where: { categoriaId: sub.id } });
       await prisma.categoria.delete({ where: { id: sub.id } });
@@ -219,6 +250,11 @@ export const cleanAndDeleteCategoria = async (req: Request, res: Response) => {
 export const deleteCategoriaWithArticles = async (req: Request, res: Response) => {
   try {
     const categoriaId = Number(req.params.id);
+    const empresaId = (req as any).empresaId;
+
+    const categoria = await prisma.categoria.findUnique({ where: { id: categoriaId } });
+    if (!categoria || categoria.empresaId !== empresaId) return res.status(404).json({ error: "Categoría no encontrada" });
+
     const deletedArticles = await prisma.articulo.deleteMany({ where: { categoriaId } });
     const subcategorias = await prisma.categoria.findMany({ where: { padreId: categoriaId } });
     for (const sub of subcategorias) {

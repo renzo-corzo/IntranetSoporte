@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { PlusIcon, MagnifyingGlassIcon, PencilIcon, TrashIcon, ComputerDesktopIcon, LinkIcon } from '@heroicons/react/24/outline';
+import { PlusIcon, MagnifyingGlassIcon, PencilIcon, TrashIcon, ComputerDesktopIcon, LinkIcon, KeyIcon } from '@heroicons/react/24/outline';
 import {
   getEquiposUsuario,
   createEquipoUsuario,
@@ -10,6 +10,7 @@ import {
 import { useAuth } from '../../context/AuthContext';
 import EquipoUsuarioForm from './EquipoUsuarioForm';
 import RelacionesView from './RelacionesView';
+import CredencialesModal from './CredencialesModal';
 
 const EquiposUsuario: React.FC = () => {
   const { token, user } = useAuth();
@@ -25,6 +26,7 @@ const EquiposUsuario: React.FC = () => {
   const [equipoEdit, setEquipoEdit] = useState<EquipoUsuario | null>(null);
   const [showRelaciones, setShowRelaciones] = useState(false);
   const [equipoRelaciones, setEquipoRelaciones] = useState<string | null>(null);
+  const [equipoCredenciales, setEquipoCredenciales] = useState<EquipoUsuario | null>(null);
   const [total, setTotal] = useState(0);
 
   useEffect(() => {
@@ -208,6 +210,13 @@ const EquiposUsuario: React.FC = () => {
                         <LinkIcon className="h-5 w-5" />
                       </button>
                     )}
+                    <button
+                      onClick={() => setEquipoCredenciales(equipo)}
+                      className="text-amber-600 hover:text-amber-900"
+                      title="Credenciales"
+                    >
+                      <KeyIcon className="h-5 w-5" />
+                    </button>
                     {canManage && (
                       <>
                         <button
@@ -248,6 +257,16 @@ const EquiposUsuario: React.FC = () => {
             setShowRelaciones(false);
             setEquipoRelaciones(null);
           }}
+        />
+      )}
+
+      {equipoCredenciales && (
+        <CredencialesModal
+          tipoEquipo="EQUIPO_USUARIO"
+          equipoId={equipoCredenciales.id}
+          nombre={equipoCredenciales.nombre}
+          canManage={canManage}
+          onClose={() => setEquipoCredenciales(null)}
         />
       )}
     </div>

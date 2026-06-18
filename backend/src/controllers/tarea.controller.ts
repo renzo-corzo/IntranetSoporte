@@ -75,8 +75,8 @@ const calcularProximaFecha = (periodo: string, diaDelMes?: string, fechaActual?:
   return proximaFecha;
 };
 
-const crearInstanciasRecurrentesSiCorresponde = async () => {
-  const tareas = await prisma.tarea.findMany();
+const crearInstanciasRecurrentesSiCorresponde = async (empresaId: string) => {
+  const tareas = await prisma.tarea.findMany({ where: { empresaId } });
   const now = new Date();
   for (const tarea of tareas) {
     if (!tarea.repeticion || tarea.repeticion === "No se repite" || !tarea.periodo || tarea.estado === "eliminada") continue;
@@ -88,6 +88,7 @@ const crearInstanciasRecurrentesSiCorresponde = async () => {
     if (!debeCrear) continue;
     await prisma.tarea.create({
       data: {
+        empresaId,
         titulo: tarea.titulo,
         descripcion: tarea.descripcion,
         responsableId: tarea.responsableId,
@@ -193,11 +194,13 @@ const mapEstadoData = (estadoInput: string | undefined, current?: { fechaCierre:
 
 export const getTareas = async (req: Request, res: Response) => {
   try {
-    await crearInstanciasRecurrentesSiCorresponde();
+    const empresaId = (req as any).empresaId;
+    await crearInstanciasRecurrentesSiCorresponde(empresaId);
     const where = buildWhereFromQuery({
       ...req.query,
       userId: (req as any).user?.id
     });
+    where.empresaId = empresaId;
     const tareas = await prisma.tarea.findMany({
       where,
       include: includeTarea,
@@ -212,11 +215,12 @@ export const getTareas = async (req: Request, res: Response) => {
 
 export const getTareaById = async (req: Request, res: Response) => {
   try {
+    const empresaId = (req as any).empresaId;
     const tarea = await prisma.tarea.findUnique({
       where: { id: Number(req.params.id) },
       include: includeTarea
     });
-    if (!tarea) return res.status(404).json({ error: "Tarea no encontrada" });
+    if (!tarea || tarea.empresaId !== empresaId) return res.status(404).json({ error: "Tarea no encontrada" });
     res.json(serializeTarea(tarea));
   } catch (err) {
     console.error("Error al obtener tarea:", err);
@@ -228,6 +232,7 @@ export const createTarea = async (req: Request, res: Response) => {
   try {
     const body = req.body || {};
     const userId = (req as any).user?.id;
+    const empresaId = (req as any).empresaId;
     const estadoNormalizado = normalizeEstadoWrite(body.estado || "pendiente");
     const prioridad = body.prioridad || "media";
     const origen = body.origen || "interno";
@@ -247,6 +252,7 @@ export const createTarea = async (req: Request, res: Response) => {
     const isTerminal = isEstadoTerminal(estadoNormalizado);
     const tarea = await prisma.tarea.create({
       data: {
+        empresaId,
         titulo: body.titulo,
         descripcion: body.descripcion,
         responsableId: body.responsableId ? Number(body.responsableId) : null,
@@ -282,9 +288,10 @@ export const createTarea = async (req: Request, res: Response) => {
 export const updateTarea = async (req: Request, res: Response) => {
   try {
     const id = Number(req.params.id);
+    const empresaId = (req as any).empresaId;
     const body = req.body || {};
     const actual = await prisma.tarea.findUnique({ where: { id } });
-    if (!actual) return res.status(404).json({ error: "Tarea no encontrada" });
+    if (!actual || actual.empresaId !== empresaId) return res.status(404).json({ error: "Tarea no encontrada" });
 
     const estadoInput = body.estado ? normalizeEstadoWrite(body.estado) : undefined;
     if (estadoInput && !ESTADOS_VALIDOS.includes(estadoInput as typeof ESTADOS_VALIDOS[number])) {
@@ -356,6 +363,7 @@ export const getTareasKpis = async (req: Request, res: Response) => {
       ...req.query,
       userId: (req as any).user?.id
     });
+    where.empresaId = (req as any).empresaId;
     const tareas = await prisma.tarea.findMany({ where, select: { estado: true, prioridad: true, fechaVencimiento: true, fechaCierre: true, finalizadaEn: true } });
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -382,6 +390,7 @@ export const getTareasTablero = async (req: Request, res: Response) => {
       ...req.query,
       userId: (req as any).user?.id
     });
+    where.empresaId = (req as any).empresaId;
     const tareas = await prisma.tarea.findMany({
       where,
       include: includeTarea,
@@ -410,6 +419,7 @@ export const getTareasAgenda = async (req: Request, res: Response) => {
       ...req.query,
       userId: (req as any).user?.id
     });
+    where.empresaId = (req as any).empresaId;
     const from = req.query.from ? new Date(String(req.query.from)) : new Date();
     const to = req.query.to ? new Date(String(req.query.to)) : new Date(Date.now() + 1000 * 60 * 60 * 24 * 60);
     const andClauses: Prisma.TareaWhereInput[] = Array.isArray(where.AND) ? where.AND : [];
@@ -430,6 +440,9 @@ export const getTareasAgenda = async (req: Request, res: Response) => {
 export const getComentariosTarea = async (req: Request, res: Response) => {
   try {
     const tareaId = Number(req.params.id);
+    const empresaId = (req as any).empresaId;
+    const tarea = await prisma.tarea.findUnique({ where: { id: tareaId } });
+    if (!tarea || tarea.empresaId !== empresaId) return res.status(404).json({ error: "Tarea no encontrada" });
     const comentarios = await prisma.comentario.findMany({
       where: { tareaId },
       include: { autor: true },
@@ -444,7 +457,11 @@ export const getComentariosTarea = async (req: Request, res: Response) => {
 
 export const deleteTarea = async (req: Request, res: Response) => {
   try {
-    await prisma.tarea.delete({ where: { id: Number(req.params.id) } });
+    const id = Number(req.params.id);
+    const empresaId = (req as any).empresaId;
+    const tarea = await prisma.tarea.findUnique({ where: { id } });
+    if (!tarea || tarea.empresaId !== empresaId) return res.status(404).json({ error: "Tarea no encontrada" });
+    await prisma.tarea.delete({ where: { id } });
     res.json({ message: "Tarea eliminada" });
   } catch (err) {
     console.error("Error al eliminar tarea:", err);
@@ -456,8 +473,11 @@ export const addComentario = async (req: Request, res: Response) => {
   try {
     const { contenido } = req.body;
     const tareaId = Number(req.params.id);
+    const empresaId = (req as any).empresaId;
     const autorId = Number((req as any).user?.id);
     if (!autorId) return res.status(401).json({ error: "No autenticado" });
+    const tarea = await prisma.tarea.findUnique({ where: { id: tareaId } });
+    if (!tarea || tarea.empresaId !== empresaId) return res.status(404).json({ error: "Tarea no encontrada" });
     const comentario = await prisma.comentario.create({
       data: { contenido, tareaId, autorId },
       include: { autor: true }
@@ -472,12 +492,13 @@ export const addComentario = async (req: Request, res: Response) => {
 export const completarTarea = async (req: Request, res: Response) => {
   try {
     const tareaId = Number(req.params.id);
+    const empresaId = (req as any).empresaId;
     const { observacion } = req.body || {};
     const tareaActual = await prisma.tarea.findUnique({
       where: { id: tareaId },
       include: includeTarea
     });
-    if (!tareaActual) return res.status(404).json({ error: "Tarea no encontrada" });
+    if (!tareaActual || tareaActual.empresaId !== empresaId) return res.status(404).json({ error: "Tarea no encontrada" });
 
     let nuevaFechaVencimiento: Date | null = null;
     if (tareaActual.periodo && tareaActual.periodo !== "") {
@@ -498,6 +519,7 @@ export const completarTarea = async (req: Request, res: Response) => {
     if (nuevaFechaVencimiento && tareaActual.periodo) {
       await prisma.tarea.create({
         data: {
+          empresaId,
           titulo: tareaActual.titulo,
           descripcion: tareaActual.descripcion,
           responsableId: tareaActual.responsableId,

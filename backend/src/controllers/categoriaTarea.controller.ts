@@ -1,13 +1,13 @@
 import { Request, Response } from "express";
-import { PrismaClient } from "@prisma/client";
 import prisma from '../lib/prisma';
 
 
 // Obtener todas las categorías de tareas
 export const getCategoriasTarea = async (req: Request, res: Response) => {
   try {
+    const empresaId = (req as any).empresaId;
     const categorias = await prisma.categoriaTarea.findMany({
-      where: { activa: true },
+      where: { empresaId, activa: true },
       include: {
         _count: {
           select: { tareas: true }
@@ -24,6 +24,7 @@ export const getCategoriasTarea = async (req: Request, res: Response) => {
 // Obtener una categoría por ID
 export const getCategoriaTareaById = async (req: Request, res: Response) => {
   try {
+    const empresaId = (req as any).empresaId;
     const categoria = await prisma.categoriaTarea.findUnique({
       where: { id: Number(req.params.id) },
       include: {
@@ -38,11 +39,11 @@ export const getCategoriaTareaById = async (req: Request, res: Response) => {
         }
       }
     });
-    
-    if (!categoria) {
+
+    if (!categoria || categoria.empresaId !== empresaId) {
       return res.status(404).json({ error: "Categoría no encontrada" });
     }
-    
+
     res.json(categoria);
   } catch (err) {
     res.status(500).json({ error: "Error al obtener categoría" });
@@ -52,21 +53,23 @@ export const getCategoriaTareaById = async (req: Request, res: Response) => {
 // Crear nueva categoría
 export const createCategoriaTarea = async (req: Request, res: Response) => {
   try {
+    const empresaId = (req as any).empresaId;
     const { nombre, descripcion, color, icono } = req.body;
-    
+
     if (!nombre) {
       return res.status(400).json({ error: "El nombre es obligatorio" });
     }
-    
+
     const categoria = await prisma.categoriaTarea.create({
       data: {
+        empresaId,
         nombre,
         descripcion,
         color,
         icono
       }
     });
-    
+
     res.status(201).json(categoria);
   } catch (err: any) {
     if (err.code === 'P2002') {
@@ -79,8 +82,14 @@ export const createCategoriaTarea = async (req: Request, res: Response) => {
 // Actualizar categoría
 export const updateCategoriaTarea = async (req: Request, res: Response) => {
   try {
+    const empresaId = (req as any).empresaId;
     const { nombre, descripcion, color, icono, activa } = req.body;
-    
+
+    const existente = await prisma.categoriaTarea.findUnique({ where: { id: Number(req.params.id) } });
+    if (!existente || existente.empresaId !== empresaId) {
+      return res.status(404).json({ error: "Categoría no encontrada" });
+    }
+
     const categoria = await prisma.categoriaTarea.update({
       where: { id: Number(req.params.id) },
       data: {
@@ -91,7 +100,7 @@ export const updateCategoriaTarea = async (req: Request, res: Response) => {
         activa
       }
     });
-    
+
     res.json(categoria);
   } catch (err: any) {
     if (err.code === 'P2025') {
@@ -107,8 +116,9 @@ export const updateCategoriaTarea = async (req: Request, res: Response) => {
 // Eliminar categoría (soft delete)
 export const deleteCategoriaTarea = async (req: Request, res: Response) => {
   try {
+    const empresaId = (req as any).empresaId;
     const categoriaId = Number(req.params.id);
-    
+
     // Verificar si tiene tareas asociadas
     const categoria = await prisma.categoriaTarea.findUnique({
       where: { id: categoriaId },
@@ -118,11 +128,11 @@ export const deleteCategoriaTarea = async (req: Request, res: Response) => {
         }
       }
     });
-    
-    if (!categoria) {
+
+    if (!categoria || categoria.empresaId !== empresaId) {
       return res.status(404).json({ error: "Categoría no encontrada" });
     }
-    
+
     if (categoria._count.tareas > 0) {
       // Soft delete - marcar como inactiva
       await prisma.categoriaTarea.update({

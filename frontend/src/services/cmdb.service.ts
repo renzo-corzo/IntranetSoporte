@@ -103,20 +103,35 @@ export interface EquipoUsuario {
 export interface Servicio {
   id: string;
   nombre: string;
-  tipo: 'SQL' | 'IIS' | 'ZABBIX' | 'PROXY' | 'NTOPNG' | 'DC' | 'DNS' | 'DHCP' | 'FILE_SERVER' | 'WEB_SERVER' | 'MAIL_SERVER' | 'BACKUP_SERVER' | 'VEEAM' | 'VMWARE' | 'HYPER_V' | 'OTRO';
+  tipo: 'SQL' | 'IIS' | 'ZABBIX' | 'PROXY' | 'NTOPNG' | 'DC' | 'DNS' | 'DHCP' | 'FILE_SERVER' | 'WEB_SERVER' | 'MAIL_SERVER' | 'BACKUP_SERVER' | 'VEEAM' | 'VMWARE' | 'HYPER_V' | 'WIFI' | 'OTRO';
   version?: string;
   puerto?: number;
+  ssid?: string;
   estado: 'PRODUCCION' | 'TEST' | 'FUERA_DE_SERVICIO' | 'MANTENIMIENTO';
   fechaAlta: string;
   fechaBaja?: string;
   notasTecnicas?: string;
-  tipoEquipo: 'SERVIDOR_FISICO' | 'MAQUINA_VIRTUAL';
+  tipoEquipo?: 'SERVIDOR_FISICO' | 'MAQUINA_VIRTUAL';
   servidorFisicoId?: string;
   maquinaVirtualId?: string;
   createdAt: string;
   updatedAt: string;
   servidorFisico?: ServidorFisico;
   maquinaVirtual?: MaquinaVirtual;
+}
+
+// Credenciales
+export type TipoEquipoCredencial = 'SERVIDOR_FISICO' | 'MAQUINA_VIRTUAL' | 'EQUIPO_RED' | 'EQUIPO_USUARIO' | 'SERVICIO';
+
+export interface Credencial {
+  id: string;
+  nombre: string;
+  usuario?: string;
+  notas?: string;
+  tipoEquipo: TipoEquipoCredencial;
+  creadoEn: string;
+  actualizadoEn: string;
+  creadoPor?: { id: number; nombre: string };
 }
 
 // ===== SERVICIOS API =====
@@ -304,5 +319,49 @@ export const deleteServicio = async (id: string, token: string) => {
     headers: { Authorization: `Bearer ${token}` }
   });
   return response.data;
+};
+
+// Credenciales
+export const getCredenciales = async (tipoEquipo: TipoEquipoCredencial, equipoId: string, token: string) => {
+  const response = await axios.get(`${API_URL}/credenciales`, {
+    headers: { Authorization: `Bearer ${token}` },
+    params: { tipoEquipo, equipoId }
+  });
+  return response.data as Credencial[];
+};
+
+export const createCredencial = async (
+  data: { nombre: string; usuario?: string; password: string; notas?: string; tipoEquipo: TipoEquipoCredencial; equipoId: string },
+  token: string
+) => {
+  const response = await axios.post(`${API_URL}/credenciales`, data, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+  return response.data as Credencial;
+};
+
+export const updateCredencial = async (
+  id: string,
+  data: { nombre: string; usuario?: string; password?: string; notas?: string },
+  token: string
+) => {
+  const response = await axios.put(`${API_URL}/credenciales/${id}`, data, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+  return response.data as Credencial;
+};
+
+export const deleteCredencial = async (id: string, token: string) => {
+  const response = await axios.delete(`${API_URL}/credenciales/${id}`, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+  return response.data;
+};
+
+export const revelarCredencial = async (id: string, token: string) => {
+  const response = await axios.post(`${API_URL}/credenciales/${id}/revelar`, {}, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+  return response.data as { password: string };
 };
 

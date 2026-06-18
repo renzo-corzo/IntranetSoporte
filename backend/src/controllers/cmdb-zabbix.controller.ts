@@ -83,6 +83,7 @@ export const getZabbixHosts = async (req: Request, res: Response) => {
 export const sincronizarHost = async (req: Request, res: Response) => {
   try {
     const { zabbixHostId, cmdbTipo, cmdbId, accion } = req.body;
+    const empresaId = (req as any).empresaId;
 
     console.log('🛰️ sincronizarHost payload:', {
       zabbixHostId,
@@ -161,6 +162,7 @@ export const sincronizarHost = async (req: Request, res: Response) => {
       if (cmdbTipo === 'servidor') {
         const nuevoServidor = await prisma.servidorFisico.create({
           data: {
+            empresaId,
             nombre: zabbixHost.name,
             ip: ipPrincipal,
             estado: estadoZabbix,
@@ -171,6 +173,7 @@ export const sincronizarHost = async (req: Request, res: Response) => {
       } else if (cmdbTipo === 'vm') {
         const nuevaVM = await prisma.maquinaVirtual.create({
           data: {
+            empresaId,
             nombre: zabbixHost.name,
             ip: ipPrincipal,
             estado: estadoZabbix,
@@ -182,6 +185,7 @@ export const sincronizarHost = async (req: Request, res: Response) => {
         const tipoEquipoRed = detectarTipoEquipoRed(zabbixHost.name);
         const nuevoEquipoRed = await prisma.equipoRed.create({
           data: {
+            empresaId,
             nombre: zabbixHost.name,
             ip: ipPrincipal,
             tipo: tipoEquipoRed,
@@ -215,6 +219,7 @@ export const sincronizarHost = async (req: Request, res: Response) => {
         const tipoEquipoUsuario = detectarTipoEquipoUsuario(zabbixHost.name);
         const nuevoEquipoUsuario = await prisma.equipoUsuario.create({
           data: {
+            empresaId,
             nombre: zabbixHost.name,
             ip: ipPrincipal,
             tipo: tipoEquipoUsuario,
@@ -225,7 +230,21 @@ export const sincronizarHost = async (req: Request, res: Response) => {
         return res.json({ success: true, equipo: nuevoEquipoUsuario, tipo: 'usuario' });
       }
     } else if (accion === 'actualizar' && cmdbId) {
-      // Actualizar equipo existente
+      // Actualizar equipo existente (verificando que pertenezca al cliente activo)
+      const modeloPorTipo: Record<string, any> = {
+        servidor: prisma.servidorFisico,
+        vm: prisma.maquinaVirtual,
+        red: prisma.equipoRed,
+        usuario: prisma.equipoUsuario,
+      };
+      const modelo = modeloPorTipo[cmdbTipo];
+      if (modelo) {
+        const existente = await modelo.findUnique({ where: { id: cmdbId } });
+        if (!existente || existente.empresaId !== empresaId) {
+          return res.status(404).json({ error: 'Equipo no encontrado en este cliente' });
+        }
+      }
+
       if (cmdbTipo === 'servidor') {
         const servidor = await prisma.servidorFisico.update({
           where: { id: cmdbId },
@@ -279,39 +298,40 @@ export const sincronizarHost = async (req: Request, res: Response) => {
 // Buscar coincidencias entre Zabbix y CMDB
 export const buscarCoincidencias = async (req: Request, res: Response) => {
   try {
+    const empresaId = (req as any).empresaId;
     const token = await zabbixLogin();
     const hosts = await getZabbixHostsFull(token);
 
     const coincidencias = await Promise.all(
       hosts.map(async (host: any) => {
-        const ipPrincipal = host.interfaces && host.interfaces.length > 0 
-          ? host.interfaces[0].ip 
+        const ipPrincipal = host.interfaces && host.interfaces.length > 0
+          ? host.interfaces[0].ip
           : null;
 
         // Buscar por IP
         const porIP = ipPrincipal ? await prisma.servidorFisico.findFirst({
-          where: { ip: ipPrincipal }
+          where: { empresaId, ip: ipPrincipal }
         }) : null;
 
         // Buscar por nombre
         const porNombre = await prisma.servidorFisico.findFirst({
-          where: { nombre: host.name }
+          where: { empresaId, nombre: host.name }
         });
 
         // Buscar en VMs
         const vmPorIP = ipPrincipal ? await prisma.maquinaVirtual.findFirst({
-          where: { ip: ipPrincipal }
+          where: { empresaId, ip: ipPrincipal }
         }) : null;
         const vmPorNombre = await prisma.maquinaVirtual.findFirst({
-          where: { nombre: host.name }
+          where: { empresaId, nombre: host.name }
         });
 
         // Buscar en equipos de red
         const redPorIP = ipPrincipal ? await prisma.equipoRed.findFirst({
-          where: { ip: ipPrincipal }
+          where: { empresaId, ip: ipPrincipal }
         }) : null;
         const redPorNombre = await prisma.equipoRed.findFirst({
-          where: { nombre: host.name }
+          where: { empresaId, nombre: host.name }
         });
 
         return {

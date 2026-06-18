@@ -6,11 +6,12 @@ import prisma from '../lib/prisma';
 export const obtenerMaquinasVirtuales = async (req: Request, res: Response) => {
   try {
     const { estado, hostId, buscar, page = 1, limit = 50 } = req.query;
+    const empresaId = (req as any).empresaId;
 
     const skip = (Number(page) - 1) * Number(limit);
     const take = Number(limit);
 
-    const where: any = {};
+    const where: any = { empresaId };
 
     if (estado) {
       where.estado = estado;
@@ -65,6 +66,7 @@ export const obtenerMaquinasVirtuales = async (req: Request, res: Response) => {
 export const obtenerMaquinaVirtualPorId = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
+    const empresaId = (req as any).empresaId;
 
     const maquina = await prisma.maquinaVirtual.findUnique({
       where: { id },
@@ -74,7 +76,7 @@ export const obtenerMaquinaVirtualPorId = async (req: Request, res: Response) =>
       }
     });
 
-    if (!maquina) {
+    if (!maquina || maquina.empresaId !== empresaId) {
       return res.status(404).json({ error: 'Máquina virtual no encontrada' });
     }
 
@@ -88,6 +90,7 @@ export const obtenerMaquinaVirtualPorId = async (req: Request, res: Response) =>
 // Crear máquina virtual
 export const crearMaquinaVirtual = async (req: Request, res: Response) => {
   try {
+    const empresaId = (req as any).empresaId;
     const {
       nombre,
       ip,
@@ -109,19 +112,20 @@ export const crearMaquinaVirtual = async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'El nombre es obligatorio' });
     }
 
-    // Si se proporciona hostId, verificar que el servidor físico existe
+    // Si se proporciona hostId, verificar que el servidor físico existe en este cliente
     if (hostId) {
       const host = await prisma.servidorFisico.findUnique({
         where: { id: hostId }
       });
 
-      if (!host) {
+      if (!host || host.empresaId !== empresaId) {
         return res.status(404).json({ error: 'Servidor físico (host) no encontrado' });
       }
     }
 
     const maquina = await prisma.maquinaVirtual.create({
       data: {
+        empresaId,
         nombre,
         ip,
         sistemaOperativo,
@@ -153,6 +157,7 @@ export const crearMaquinaVirtual = async (req: Request, res: Response) => {
 export const actualizarMaquinaVirtual = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
+    const empresaId = (req as any).empresaId;
     const {
       nombre,
       ip,
@@ -174,17 +179,17 @@ export const actualizarMaquinaVirtual = async (req: Request, res: Response) => {
       where: { id }
     });
 
-    if (!maquinaExistente) {
+    if (!maquinaExistente || maquinaExistente.empresaId !== empresaId) {
       return res.status(404).json({ error: 'Máquina virtual no encontrada' });
     }
 
-    // Si se cambia el hostId, verificar que el servidor físico existe
+    // Si se cambia el hostId, verificar que el servidor físico existe en este cliente
     if (hostId && hostId !== maquinaExistente.hostId) {
       const host = await prisma.servidorFisico.findUnique({
         where: { id: hostId }
       });
 
-      if (!host) {
+      if (!host || host.empresaId !== empresaId) {
         return res.status(404).json({ error: 'Servidor físico (host) no encontrado' });
       }
     }
@@ -223,6 +228,7 @@ export const actualizarMaquinaVirtual = async (req: Request, res: Response) => {
 export const eliminarMaquinaVirtual = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
+    const empresaId = (req as any).empresaId;
 
     // Verificar que la máquina existe
     const maquina = await prisma.maquinaVirtual.findUnique({
@@ -232,7 +238,7 @@ export const eliminarMaquinaVirtual = async (req: Request, res: Response) => {
       }
     });
 
-    if (!maquina) {
+    if (!maquina || maquina.empresaId !== empresaId) {
       return res.status(404).json({ error: 'Máquina virtual no encontrada' });
     }
 
@@ -251,4 +257,3 @@ export const eliminarMaquinaVirtual = async (req: Request, res: Response) => {
     res.status(500).json({ error: 'Error interno del servidor' });
   }
 };
-

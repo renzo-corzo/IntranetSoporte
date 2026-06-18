@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { PlusIcon, MagnifyingGlassIcon, PencilIcon, TrashIcon, ServerIcon, LinkIcon } from '@heroicons/react/24/outline';
+import { PlusIcon, MagnifyingGlassIcon, PencilIcon, TrashIcon, ServerIcon, LinkIcon, KeyIcon } from '@heroicons/react/24/outline';
 import {
   getServidoresFisicos,
   createServidorFisico,
@@ -10,6 +10,7 @@ import {
 import { useAuth } from '../../context/AuthContext';
 import ServidorFisicoForm from './ServidorFisicoForm';
 import RelacionesView from './RelacionesView';
+import CredencialesModal from './CredencialesModal';
 
 const ServidoresFisicos: React.FC = () => {
   const { token, user } = useAuth();
@@ -24,6 +25,7 @@ const ServidoresFisicos: React.FC = () => {
   const [servidorEdit, setServidorEdit] = useState<ServidorFisico | null>(null);
   const [showRelaciones, setShowRelaciones] = useState(false);
   const [servidorRelaciones, setServidorRelaciones] = useState<string | null>(null);
+  const [servidorCredenciales, setServidorCredenciales] = useState<ServidorFisico | null>(null);
   const [total, setTotal] = useState(0);
 
   useEffect(() => {
@@ -200,6 +202,13 @@ const ServidoresFisicos: React.FC = () => {
                     >
                       <LinkIcon className="h-5 w-5" />
                     </button>
+                    <button
+                      onClick={() => setServidorCredenciales(servidor)}
+                      className="text-amber-600 hover:text-amber-900"
+                      title="Credenciales"
+                    >
+                      <KeyIcon className="h-5 w-5" />
+                    </button>
                     {canManage && (
                       <>
                         <button
@@ -245,6 +254,17 @@ const ServidoresFisicos: React.FC = () => {
             setShowRelaciones(false);
             setServidorRelaciones(null);
           }}
+        />
+      )}
+
+      {/* Modal de credenciales */}
+      {servidorCredenciales && (
+        <CredencialesModal
+          tipoEquipo="SERVIDOR_FISICO"
+          equipoId={servidorCredenciales.id}
+          nombre={servidorCredenciales.nombre}
+          canManage={canManage}
+          onClose={() => setServidorCredenciales(null)}
         />
       )}
     </div>

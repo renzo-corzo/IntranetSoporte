@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { PlusIcon, MagnifyingGlassIcon, PencilIcon, TrashIcon, WifiIcon } from '@heroicons/react/24/outline';
+import { PlusIcon, MagnifyingGlassIcon, PencilIcon, TrashIcon, WifiIcon, KeyIcon } from '@heroicons/react/24/outline';
 import {
   getEquiposRed,
   createEquipoRed,
@@ -9,6 +9,7 @@ import {
 } from '../../services/cmdb.service';
 import { useAuth } from '../../context/AuthContext';
 import EquipoRedForm from './EquipoRedForm';
+import CredencialesModal from './CredencialesModal';
 
 const EquiposRed: React.FC = () => {
   const { token, user } = useAuth();
@@ -22,6 +23,7 @@ const EquiposRed: React.FC = () => {
   const [filtroEstado, setFiltroEstado] = useState('');
   const [showForm, setShowForm] = useState(false);
   const [equipoEdit, setEquipoEdit] = useState<EquipoRed | null>(null);
+  const [equipoCredenciales, setEquipoCredenciales] = useState<EquipoRed | null>(null);
   const [total, setTotal] = useState(0);
 
   useEffect(() => {
@@ -158,13 +160,13 @@ const EquiposRed: React.FC = () => {
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Ubicación</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Fabricante/Modelo</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Estado</th>
-              {canManage && <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Acciones</th>}
+              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Acciones</th>
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
             {equipos.length === 0 ? (
               <tr>
-                <td colSpan={canManage ? 7 : 6} className="px-6 py-8 text-center text-gray-500">
+                <td colSpan={7} className="px-6 py-8 text-center text-gray-500">
                   <WifiIcon className="h-12 w-12 mx-auto mb-2 text-gray-300" />
                   <p>No se encontraron equipos de red</p>
                 </td>
@@ -184,16 +186,25 @@ const EquiposRed: React.FC = () => {
                       {equipo.estado}
                     </span>
                   </td>
-                  {canManage && (
-                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2">
-                      <button onClick={() => handleEditar(equipo)} className="text-blue-600 hover:text-blue-900">
-                        <PencilIcon className="h-5 w-5" />
-                      </button>
-                      <button onClick={() => handleEliminar(equipo.id)} className="text-red-600 hover:text-red-900">
-                        <TrashIcon className="h-5 w-5" />
-                      </button>
-                    </td>
-                  )}
+                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2">
+                    <button
+                      onClick={() => setEquipoCredenciales(equipo)}
+                      className="text-amber-600 hover:text-amber-900"
+                      title="Credenciales"
+                    >
+                      <KeyIcon className="h-5 w-5" />
+                    </button>
+                    {canManage && (
+                      <>
+                        <button onClick={() => handleEditar(equipo)} className="text-blue-600 hover:text-blue-900">
+                          <PencilIcon className="h-5 w-5" />
+                        </button>
+                        <button onClick={() => handleEliminar(equipo.id)} className="text-red-600 hover:text-red-900">
+                          <TrashIcon className="h-5 w-5" />
+                        </button>
+                      </>
+                    )}
+                  </td>
                 </tr>
               ))
             )}
@@ -213,6 +224,16 @@ const EquiposRed: React.FC = () => {
             setEquipoEdit(null);
             cargarEquipos();
           }}
+        />
+      )}
+
+      {equipoCredenciales && (
+        <CredencialesModal
+          tipoEquipo="EQUIPO_RED"
+          equipoId={equipoCredenciales.id}
+          nombre={equipoCredenciales.nombre}
+          canManage={canManage}
+          onClose={() => setEquipoCredenciales(null)}
         />
       )}
     </div>

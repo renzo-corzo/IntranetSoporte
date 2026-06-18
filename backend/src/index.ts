@@ -26,6 +26,8 @@ import equiposRedRoutes from './routes/equipos-red.routes';
 import equiposUsuarioRoutes from './routes/equipos-usuario.routes';
 import serviciosRoutes from './routes/servicios.routes';
 import cmdbDashboardRoutes from './routes/cmdb-dashboard.routes';
+import credencialesRoutes from './routes/credenciales.routes';
+import empresaRoutes from './routes/empresa.routes';
 import prisma from './lib/prisma';
 
 // Load environment variables
@@ -73,6 +75,8 @@ app.use('/api/equipos-red', equiposRedRoutes);
 app.use('/api/equipos-usuario', equiposUsuarioRoutes);
 app.use('/api/servicios', serviciosRoutes);
 app.use('/api/cmdb', cmdbDashboardRoutes);
+app.use('/api/credenciales', credencialesRoutes);
+app.use('/api/empresas', empresaRoutes);
 
 // 404 handler
 app.use('*', (req, res) => {

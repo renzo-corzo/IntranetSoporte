@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { PlusIcon, MagnifyingGlassIcon, PencilIcon, TrashIcon, CogIcon } from '@heroicons/react/24/outline';
+import { PlusIcon, MagnifyingGlassIcon, PencilIcon, TrashIcon, CogIcon, KeyIcon } from '@heroicons/react/24/outline';
 import {
   getServicios,
   createServicio,
@@ -9,6 +9,7 @@ import {
 } from '../../services/cmdb.service';
 import { useAuth } from '../../context/AuthContext';
 import ServicioForm from './ServicioForm';
+import CredencialesModal from './CredencialesModal';
 
 const Servicios: React.FC = () => {
   const { token, user } = useAuth();
@@ -22,6 +23,7 @@ const Servicios: React.FC = () => {
   const [filtroEstado, setFiltroEstado] = useState('');
   const [showForm, setShowForm] = useState(false);
   const [servicioEdit, setServicioEdit] = useState<Servicio | null>(null);
+  const [servicioCredenciales, setServicioCredenciales] = useState<Servicio | null>(null);
   const [total, setTotal] = useState(0);
 
   useEffect(() => {
@@ -138,6 +140,7 @@ const Servicios: React.FC = () => {
             <option value="DC">Domain Controller</option>
             <option value="DNS">DNS</option>
             <option value="DHCP">DHCP</option>
+            <option value="WIFI">WiFi</option>
             <option value="OTRO">Otro</option>
           </select>
         </div>
@@ -166,13 +169,13 @@ const Servicios: React.FC = () => {
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Puerto</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Equipo</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Estado</th>
-              {canManage && <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Acciones</th>}
+              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Acciones</th>
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
             {servicios.length === 0 ? (
               <tr>
-                <td colSpan={canManage ? 7 : 6} className="px-6 py-8 text-center text-gray-500">
+                <td colSpan={7} className="px-6 py-8 text-center text-gray-500">
                   <CogIcon className="h-12 w-12 mx-auto mb-2 text-gray-300" />
                   <p>No se encontraron servicios</p>
                 </td>
@@ -185,26 +188,35 @@ const Servicios: React.FC = () => {
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{servicio.version || '-'}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{servicio.puerto || '-'}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {servicio.servidorFisico?.nombre || servicio.maquinaVirtual?.nombre || '-'}
+                    {servicio.servidorFisico?.nombre || servicio.maquinaVirtual?.nombre || (servicio.tipo === 'WIFI' && servicio.ssid ? `SSID: ${servicio.ssid}` : 'Independiente')}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span className={`px-2 py-1 text-xs font-semibold rounded-full ${getEstadoColor(servicio.estado)}`}>
                       {servicio.estado}
                     </span>
                   </td>
-                  {canManage && (
-                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2">
-                      <button
-                        onClick={() => handleEditar(servicio)}
-                        className="text-blue-600 hover:text-blue-900"
-                      >
-                        <PencilIcon className="h-5 w-5" />
-                      </button>
-                      <button onClick={() => handleEliminar(servicio.id)} className="text-red-600 hover:text-red-900">
-                        <TrashIcon className="h-5 w-5" />
-                      </button>
-                    </td>
-                  )}
+                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2">
+                    <button
+                      onClick={() => setServicioCredenciales(servicio)}
+                      className="text-amber-600 hover:text-amber-900"
+                      title="Credenciales"
+                    >
+                      <KeyIcon className="h-5 w-5" />
+                    </button>
+                    {canManage && (
+                      <>
+                        <button
+                          onClick={() => handleEditar(servicio)}
+                          className="text-blue-600 hover:text-blue-900"
+                        >
+                          <PencilIcon className="h-5 w-5" />
+                        </button>
+                        <button onClick={() => handleEliminar(servicio.id)} className="text-red-600 hover:text-red-900">
+                          <TrashIcon className="h-5 w-5" />
+                        </button>
+                      </>
+                    )}
+                  </td>
                 </tr>
               ))
             )}
@@ -220,6 +232,16 @@ const Servicios: React.FC = () => {
             setServicioEdit(null);
           }}
           onSuccess={handleFormSubmit}
+        />
+      )}
+
+      {servicioCredenciales && (
+        <CredencialesModal
+          tipoEquipo="SERVICIO"
+          equipoId={servicioCredenciales.id}
+          nombre={servicioCredenciales.nombre}
+          canManage={canManage}
+          onClose={() => setServicioCredenciales(null)}
         />
       )}
     </div>

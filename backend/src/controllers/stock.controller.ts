@@ -6,12 +6,13 @@ import prisma from '../lib/prisma';
 
 export const obtenerProductos = async (req: Request, res: Response) => {
   try {
-    const { 
-      categoria, 
-      ubicacion, 
-      proveedor, 
-      estado, 
-      stockBajo, 
+    const empresaId = (req as any).empresaId;
+    const {
+      categoria,
+      ubicacion,
+      proveedor,
+      estado,
+      stockBajo,
       stockAgotado,
       buscar,
       page = 1,
@@ -22,8 +23,8 @@ export const obtenerProductos = async (req: Request, res: Response) => {
     const take = Number(limit);
 
     // Construir filtros
-    const where: any = {};
-    
+    const where: any = { empresaId };
+
     // Filtro por categoría (puede ser ID o nombre)
     if (categoria) {
       if (isNaN(Number(categoria))) {
@@ -36,7 +37,7 @@ export const obtenerProductos = async (req: Request, res: Response) => {
         where.categoriaId = Number(categoria);
       }
     }
-    
+
     // Filtro por ubicación (puede ser ID o nombre)
     if (ubicacion) {
       if (isNaN(Number(ubicacion))) {
@@ -49,7 +50,7 @@ export const obtenerProductos = async (req: Request, res: Response) => {
         where.ubicacionId = Number(ubicacion);
       }
     }
-    
+
     if (proveedor) where.proveedorId = Number(proveedor);
     if (estado) where.estado = estado;
     // Para stock bajo, lo manejaremos después de obtener los productos
@@ -90,7 +91,7 @@ export const obtenerProductos = async (req: Request, res: Response) => {
       productos = productos.filter(p => p.stockActual <= p.stockMinimo && p.stockActual > 0);
       total = productos.length;
     }
-    
+
     // Filtrar stock agotado si se solicita
     if (stockAgotado === 'true') {
       productos = productos.filter(p => p.stockActual === 0);
@@ -115,6 +116,7 @@ export const obtenerProductos = async (req: Request, res: Response) => {
 export const obtenerProductoPorId = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
+    const empresaId = (req as any).empresaId;
 
     const producto = await prisma.productoStock.findUnique({
       where: { id: Number(id) },
@@ -145,7 +147,7 @@ export const obtenerProductoPorId = async (req: Request, res: Response) => {
       }
     });
 
-    if (!producto) {
+    if (!producto || producto.empresaId !== empresaId) {
       return res.status(404).json({ error: 'Producto no encontrado' });
     }
 
@@ -158,6 +160,7 @@ export const obtenerProductoPorId = async (req: Request, res: Response) => {
 
 export const crearProducto = async (req: Request, res: Response) => {
   try {
+    const empresaId = (req as any).empresaId;
     const {
       codigo,
       nombre,
@@ -200,15 +203,15 @@ export const crearProducto = async (req: Request, res: Response) => {
     // Verificar que los IDs sean números válidos
     const categoriaIdNum = parseInt(categoriaId);
     const unidadMedidaIdNum = parseInt(unidadMedidaId);
-    
+
     if (isNaN(categoriaIdNum) || isNaN(unidadMedidaIdNum)) {
       return res.status(400).json({ error: 'IDs de categoría y unidad de medida deben ser números válidos' });
     }
 
 
-    // Verificar que el código no exista
-    const existeCodigo = await prisma.productoStock.findUnique({
-      where: { codigo }
+    // Verificar que el código no exista en este cliente
+    const existeCodigo = await prisma.productoStock.findFirst({
+      where: { empresaId, codigo }
     });
 
     if (existeCodigo) {
@@ -217,6 +220,7 @@ export const crearProducto = async (req: Request, res: Response) => {
 
     const producto = await prisma.productoStock.create({
       data: {
+        empresaId,
         codigo,
         nombre,
         descripcion,
@@ -258,12 +262,13 @@ export const crearProducto = async (req: Request, res: Response) => {
     // Si hay stock inicial, crear movimiento de ingreso
     if (stockActual && stockActual > 0) {
       const tipoIngreso = await prisma.tipoMovimiento.findFirst({
-        where: { nombre: 'Ingreso' }
+        where: { empresaId, nombre: 'Ingreso' }
       });
 
       if (tipoIngreso) {
         await prisma.movimientoStock.create({
           data: {
+            empresaId,
             numero: `MOV-${Date.now()}`,
             productoId: producto.id,
             cantidad: parseInt(stockActual),
@@ -283,13 +288,13 @@ export const crearProducto = async (req: Request, res: Response) => {
 
     res.status(201).json(producto);
   } catch (error: any) {
-    
+
     if (error.code === 'P2002') {
       res.status(400).json({ error: 'Ya existe un producto con ese código' });
     } else if (error.code === 'P2003') {
       res.status(400).json({ error: 'Error de referencia: verifique que la categoría y unidad de medida existan' });
     } else {
-      res.status(500).json({ 
+      res.status(500).json({
         error: 'Error interno del servidor',
         details: process.env.NODE_ENV === 'development' ? error.message : undefined,
         code: error.code
@@ -301,10 +306,17 @@ export const crearProducto = async (req: Request, res: Response) => {
 export const actualizarProducto = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
+    const empresaId = (req as any).empresaId;
     const updateData = req.body;
+
+    const existente = await prisma.productoStock.findUnique({ where: { id: Number(id) } });
+    if (!existente || existente.empresaId !== empresaId) {
+      return res.status(404).json({ error: 'Producto no encontrado' });
+    }
 
     // Remover campos que no se deben actualizar directamente
     delete updateData.id;
+    delete updateData.empresaId;
     delete updateData.creadoPorId;
     delete updateData.creadoEn;
     delete updateData.stockActual; // El stock se actualiza solo con movimientos
@@ -345,6 +357,7 @@ export const actualizarProducto = async (req: Request, res: Response) => {
 export const eliminarProducto = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
+    const empresaId = (req as any).empresaId;
     const productoId = Number(id);
 
     // Verificar que el producto existe
@@ -352,7 +365,7 @@ export const eliminarProducto = async (req: Request, res: Response) => {
       where: { id: productoId }
     });
 
-    if (!producto) {
+    if (!producto || producto.empresaId !== empresaId) {
       return res.status(404).json({ error: 'Producto no encontrado' });
     }
 
@@ -371,7 +384,7 @@ export const eliminarProducto = async (req: Request, res: Response) => {
       where: { id: productoId }
     });
 
-    res.json({ 
+    res.json({
       message: 'Producto eliminado correctamente',
       movimientosEliminados: movimientosEliminados.count,
       alertasEliminadas: alertasEliminadas.count
@@ -386,10 +399,11 @@ export const eliminarProducto = async (req: Request, res: Response) => {
 
 export const obtenerMovimientos = async (req: Request, res: Response) => {
   try {
-    const { 
-      productoId, 
-      tipoMovimiento, 
-      fechaInicio, 
+    const empresaId = (req as any).empresaId;
+    const {
+      productoId,
+      tipoMovimiento,
+      fechaInicio,
       fechaFin,
       buscar,
       realizadoPorId,
@@ -400,18 +414,18 @@ export const obtenerMovimientos = async (req: Request, res: Response) => {
     const skip = (Number(page) - 1) * Number(limit);
     const take = Number(limit);
 
-    const where: any = {};
-    
+    const where: any = { empresaId };
+
     // Filtro por producto específico
     if (productoId) where.productoId = Number(productoId);
-    
+
     // Filtro por tipo de movimiento (por nombre)
     if (tipoMovimiento) {
       where.tipoMovimiento = {
         nombre: tipoMovimiento as string
       };
     }
-    
+
     // Filtro por rango de fechas
     if (fechaInicio || fechaFin) {
       where.fechaMovimiento = {};
@@ -426,12 +440,12 @@ export const obtenerMovimientos = async (req: Request, res: Response) => {
         where.fechaMovimiento.lte = fechaFinDate;
       }
     }
-    
+
     // Filtro por usuario que realizó el movimiento
     if (realizadoPorId) {
       where.realizadoPorId = Number(realizadoPorId);
     }
-    
+
     // Filtro de búsqueda por producto, número de movimiento, motivo o usuario
     if (buscar) {
       where.OR = [
@@ -523,6 +537,7 @@ export const obtenerMovimientos = async (req: Request, res: Response) => {
 
 export const crearMovimiento = async (req: Request, res: Response) => {
   try {
+    const empresaId = (req as any).empresaId;
     const {
       productoId,
       tipoMovimientoId,
@@ -545,7 +560,7 @@ export const crearMovimiento = async (req: Request, res: Response) => {
       where: { id: productoId }
     });
 
-    if (!producto) {
+    if (!producto || producto.empresaId !== empresaId) {
       return res.status(404).json({ error: 'Producto no encontrado' });
     }
 
@@ -554,7 +569,7 @@ export const crearMovimiento = async (req: Request, res: Response) => {
       where: { id: tipoMovimientoId }
     });
 
-    if (!tipoMovimiento) {
+    if (!tipoMovimiento || tipoMovimiento.empresaId !== empresaId) {
       return res.status(404).json({ error: 'Tipo de movimiento no encontrado' });
     }
 
@@ -574,6 +589,7 @@ export const crearMovimiento = async (req: Request, res: Response) => {
       // Crear movimiento
       const movimiento = await tx.movimientoStock.create({
         data: {
+          empresaId,
           numero: `MOV-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
           productoId,
           cantidad,
@@ -607,7 +623,7 @@ export const crearMovimiento = async (req: Request, res: Response) => {
       // Actualizar stock del producto
       await tx.productoStock.update({
         where: { id: productoId },
-        data: { 
+        data: {
           stockActual: nuevoStock,
           fechaUltimoMovimiento: new Date()
         }
@@ -630,9 +646,10 @@ export const crearMovimiento = async (req: Request, res: Response) => {
 
 export const obtenerAlertas = async (req: Request, res: Response) => {
   try {
+    const empresaId = (req as any).empresaId;
     const { activa, tipo, nivel } = req.query;
 
-    const where: any = {};
+    const where: any = { empresaId };
     if (activa !== undefined) where.activa = activa === 'true';
     if (tipo) where.tipo = tipo;
     if (nivel) where.nivel = nivel;
@@ -663,7 +680,13 @@ export const obtenerAlertas = async (req: Request, res: Response) => {
 export const marcarAlertaLeida = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
+    const empresaId = (req as any).empresaId;
     const userId = (req as any).user.id;
+
+    const existente = await prisma.alertaStock.findUnique({ where: { id: Number(id) } });
+    if (!existente || existente.empresaId !== empresaId) {
+      return res.status(404).json({ error: 'Alerta no encontrada' });
+    }
 
     const alerta = await prisma.alertaStock.update({
       where: { id: Number(id) },
@@ -690,6 +713,8 @@ async function verificarAlertasStock(productoId: number) {
 
   if (!producto) return;
 
+  const empresaId = producto.empresaId;
+
   // Limpiar alertas anteriores del producto
   await prisma.alertaStock.updateMany({
     where: { productoId, activa: true },
@@ -700,12 +725,13 @@ async function verificarAlertasStock(productoId: number) {
   if (producto.stockActual <= producto.stockMinimo) {
     const tipo = producto.stockActual === 0 ? 'stock_agotado' : 'stock_bajo';
     const nivel = producto.stockActual === 0 ? 'critical' : 'warning';
-    const mensaje = producto.stockActual === 0 
+    const mensaje = producto.stockActual === 0
       ? `El producto ${producto.nombre} está agotado`
       : `El producto ${producto.nombre} tiene stock bajo (${producto.stockActual}/${producto.stockMinimo})`;
 
     await prisma.alertaStock.create({
       data: {
+        empresaId,
         productoId,
         tipo,
         mensaje,
@@ -724,6 +750,7 @@ async function verificarAlertasStock(productoId: number) {
     if (diasHastaVencimiento <= 0) {
       await prisma.alertaStock.create({
         data: {
+          empresaId,
           productoId,
           tipo: 'vencido',
           mensaje: `El producto ${producto.nombre} está vencido`,
@@ -733,6 +760,7 @@ async function verificarAlertasStock(productoId: number) {
     } else if (diasHastaVencimiento <= 30) {
       await prisma.alertaStock.create({
         data: {
+          empresaId,
           productoId,
           tipo: 'vencimiento_proximo',
           mensaje: `El producto ${producto.nombre} vence en ${diasHastaVencimiento} días`,

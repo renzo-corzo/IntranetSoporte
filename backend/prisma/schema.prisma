@@ -33,11 +33,50 @@ model Usuario {
   procedimientosCreados Procedimiento[]   @relation("UsuarioProcedimientosCreados")
   productosCreados      ProductoStock[]   @relation("UsuarioProductosCreados")
   relevamientos         Relevamiento[]
+  credencialesCreadas   Credencial[]
+  accesosCredenciales   CredencialAcceso[]
   reportesGenerados     ReporteStock[]    @relation("UsuarioReportesGenerados")
   tareasCreadas         Tarea[]           @relation("CreadorTarea")
   tareasResponsable     Tarea[]           @relation("Tarea_responsable")
   rol                   Rol               @relation(fields: [rolId], references: [id])
   decisiones            Vacacion[]        @relation("Decisiones")
+}
+
+// ===== MULTI-CLIENTE =====
+// Una Empresa = un cliente de la empresa de IT. Los módulos de infraestructura
+// (CMDB, Stock, Tareas, Relevamientos, Procedimientos, KB) se etiquetan por Empresa.
+// RRHH y Usuario/Rol quedan globales: son del personal propio de la empresa de IT.
+model Empresa {
+  id          String   @id @default(cuid())
+  nombre      String   @unique
+  descripcion String?
+  activo      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  relevamientos     Relevamiento[]
+  procedimientos    Procedimiento[]
+  categoriasTarea   CategoriaTarea[]
+  tareas            Tarea[]
+  categoriasKb      Categoria[]
+  articulos         Articulo[]
+  categoriasStock   CategoriaStock[]
+  unidadesMedida    UnidadMedida[]
+  proveedoresStock  ProveedorStock[]
+  ubicacionesStock  UbicacionStock[]
+  productosStock    ProductoStock[]
+  tiposMovimiento   TipoMovimiento[]
+  movimientosStock  MovimientoStock[]
+  alertasStock      AlertaStock[]
+  reportesStock     ReporteStock[]
+  servidoresFisicos ServidorFisico[]
+  maquinasVirtuales MaquinaVirtual[]
+  equiposRed        EquipoRed[]
+  equiposUsuario    EquipoUsuario[]
+  servicios         Servicio[]
+  credenciales      Credencial[]
+
+  @@index([nombre])
 }
 
 model Relevamiento {
@@ -47,9 +86,13 @@ model Relevamiento {
   ubicacion     String
   observaciones String?
   usuarioId     Int
+  empresaId     String
   creadoEn      DateTime @default(now())
   items         Item[]
   usuario       Usuario  @relation(fields: [usuarioId], references: [id])
+  empresa       Empresa  @relation(fields: [empresaId], references: [id])
+
+  @@index([empresaId])
 }
 
 model Item {
@@ -70,20 +113,29 @@ model Procedimiento {
   descripcion String
   adjuntos    String[]
   creadoPorId Int
+  empresaId   String
   creadoEn    DateTime @default(now())
   creadoPor   Usuario  @relation("UsuarioProcedimientosCreados", fields: [creadoPorId], references: [id])
+  empresa     Empresa  @relation(fields: [empresaId], references: [id])
   tareas      Tarea[]
+
+  @@index([empresaId])
 }
 
 model CategoriaTarea {
   id          Int      @id @default(autoincrement())
-  nombre      String   @unique
+  nombre      String
   descripcion String?
   color       String?
   icono       String?
   activa      Boolean  @default(true)
+  empresaId   String
   creadoEn    DateTime @default(now())
   tareas      Tarea[]
+  empresa     Empresa  @relation(fields: [empresaId], references: [id])
+
+  @@index([empresaId])
+  @@unique([empresaId, nombre])
 }
 
 model Tarea {
@@ -106,6 +158,7 @@ model Tarea {
   observaciones    String?
   solicitante      String?
   activoRelacionado String?
+  empresaId        String
   creadaPorId      Int
   creadaEn         DateTime        @default(now())
   actualizadaEn    DateTime        @updatedAt
@@ -117,6 +170,7 @@ model Tarea {
   creadaPor        Usuario         @relation("CreadorTarea", fields: [creadaPorId], references: [id])
   procedimiento    Procedimiento?  @relation(fields: [procedimientoId], references: [id])
   responsable      Usuario?        @relation("Tarea_responsable", fields: [responsableId], references: [id])
+  empresa          Empresa         @relation(fields: [empresaId], references: [id])
 
   @@index([estado])
   @@index([prioridad])
@@ -124,6 +178,7 @@ model Tarea {
   @@index([responsableId])
   @@index([fechaVencimiento])
   @@index([fechaCierre])
+  @@index([empresaId])
 }
 
 model Comentario {
@@ -149,9 +204,13 @@ model Categoria {
   descripcion   String?
   icono         String?
   padreId       Int?
+  empresaId     String
   articulos     Articulo[]
   padre         Categoria?  @relation("CategoriaPadre", fields: [padreId], references: [id])
   subcategorias Categoria[] @relation("CategoriaPadre")
+  empresa       Empresa     @relation(fields: [empresaId], references: [id])
+
+  @@index([empresaId])
 }
 
 model Articulo {
@@ -161,6 +220,7 @@ model Articulo {
   categoriaId   Int
   adjuntos      String[]
   creadoPorId   Int
+  empresaId     String
   creadoEn      DateTime  @default(now())
   actualizadoEn DateTime? @updatedAt
   codigo        String?
@@ -171,56 +231,80 @@ model Articulo {
   fechaRevision DateTime?
   categoria     Categoria @relation(fields: [categoriaId], references: [id])
   creadoPor     Usuario   @relation(fields: [creadoPorId], references: [id])
+  empresa       Empresa   @relation(fields: [empresaId], references: [id])
+
+  @@index([empresaId])
 }
 
 model CategoriaStock {
   id          Int             @id @default(autoincrement())
-  nombre      String          @unique
+  nombre      String
   descripcion String?
   icono       String?
   color       String?
   activo      Boolean         @default(true)
+  empresaId   String
   creadoEn    DateTime        @default(now())
   productos   ProductoStock[]
+  empresa     Empresa         @relation(fields: [empresaId], references: [id])
+
+  @@index([empresaId])
+  @@unique([empresaId, nombre])
 }
 
 model UnidadMedida {
   id          Int             @id @default(autoincrement())
-  nombre      String          @unique
-  abreviacion String          @unique
+  nombre      String
+  abreviacion String
   tipo        String
   activo      Boolean         @default(true)
+  empresaId   String
   productos   ProductoStock[]
+  empresa     Empresa         @relation(fields: [empresaId], references: [id])
+
+  @@index([empresaId])
+  @@unique([empresaId, nombre])
+  @@unique([empresaId, abreviacion])
 }
 
 model ProveedorStock {
   id        Int             @id @default(autoincrement())
-  nombre    String          @unique
+  nombre    String
   contacto  String?
   telefono  String?
   email     String?
   direccion String?
   sitioWeb  String?
   activo    Boolean         @default(true)
+  empresaId String
   creadoEn  DateTime        @default(now())
   productos ProductoStock[]
+  empresa   Empresa         @relation(fields: [empresaId], references: [id])
+
+  @@index([empresaId])
+  @@unique([empresaId, nombre])
 }
 
 model UbicacionStock {
   id                 Int               @id @default(autoincrement())
-  nombre             String            @unique
+  nombre             String
   descripcion        String?
   tipo               String?
   activo             Boolean           @default(true)
+  empresaId          String
   creadoEn           DateTime          @default(now())
   movimientosDestino MovimientoStock[] @relation("MovimientoDestino")
   movimientosOrigen  MovimientoStock[] @relation("MovimientoOrigen")
   productos          ProductoStock[]
+  empresa            Empresa           @relation(fields: [empresaId], references: [id])
+
+  @@index([empresaId])
+  @@unique([empresaId, nombre])
 }
 
 model ProductoStock {
   id                    Int               @id @default(autoincrement())
-  codigo                String            @unique
+  codigo                String
   nombre                String
   descripcion           String?
   marca                 String?
@@ -246,6 +330,7 @@ model ProductoStock {
   tags                  String[]
   imagenes              String[]
   documentos            String[]
+  empresaId             String
   creadoPorId           Int
   creadoEn              DateTime          @default(now())
   actualizadoEn         DateTime          @updatedAt
@@ -256,11 +341,15 @@ model ProductoStock {
   proveedor             ProveedorStock?   @relation(fields: [proveedorId], references: [id])
   ubicacion             UbicacionStock?   @relation(fields: [ubicacionId], references: [id])
   unidadMedida          UnidadMedida      @relation(fields: [unidadMedidaId], references: [id])
+  empresa               Empresa           @relation(fields: [empresaId], references: [id])
+
+  @@index([empresaId])
+  @@unique([empresaId, codigo])
 }
 
 model TipoMovimiento {
   id              Int               @id @default(autoincrement())
-  nombre          String            @unique
+  nombre          String
   descripcion     String?
   afectaStock     String
   requiereOrigen  Boolean           @default(false)
@@ -268,12 +357,17 @@ model TipoMovimiento {
   color           String?
   icono           String?
   activo          Boolean           @default(true)
+  empresaId       String
   movimientos     MovimientoStock[]
+  empresa         Empresa           @relation(fields: [empresaId], references: [id])
+
+  @@index([empresaId])
+  @@unique([empresaId, nombre])
 }
 
 model MovimientoStock {
   id               Int             @id @default(autoincrement())
-  numero           String          @unique
+  numero           String
   productoId       Int
   cantidad         Int
   stockAnterior    Int
@@ -287,6 +381,7 @@ model MovimientoStock {
   numeroRemito     String?
   costoUnitario    Float?
   costoTotal       Float?
+  empresaId        String
   realizadoPorId   Int
   fechaMovimiento  DateTime        @default(now())
   fechaRegistro    DateTime        @default(now())
@@ -300,6 +395,10 @@ model MovimientoStock {
   producto         ProductoStock   @relation(fields: [productoId], references: [id])
   realizadoPor     Usuario         @relation("UsuarioMovimientosRealizados", fields: [realizadoPorId], references: [id])
   tipoMovimiento   TipoMovimiento  @relation(fields: [tipoMovimientoId], references: [id])
+  empresa          Empresa         @relation(fields: [empresaId], references: [id])
+
+  @@index([empresaId])
+  @@unique([empresaId, numero])
 }
 
 model AlertaStock {
@@ -310,11 +409,15 @@ model AlertaStock {
   nivel      String
   activa     Boolean       @default(true)
   leida      Boolean       @default(false)
+  empresaId  String
   creadoEn   DateTime      @default(now())
   leidaEn    DateTime?
   leidaPorId Int?
   leidaPor   Usuario?      @relation("UsuarioAlertasLeidas", fields: [leidaPorId], references: [id])
   producto   ProductoStock @relation(fields: [productoId], references: [id])
+  empresa    Empresa       @relation(fields: [empresaId], references: [id])
+
+  @@index([empresaId])
 }
 
 model ReporteStock {
@@ -325,10 +428,14 @@ model ReporteStock {
   formato         String
   archivo         String?
   estado          String    @default("Generando")
+  empresaId       String
   generadoPorId   Int
   fechaGeneracion DateTime  @default(now())
   fechaCompletado DateTime?
   generadoPor     Usuario   @relation("UsuarioReportesGenerados", fields: [generadoPorId], references: [id])
+  empresa         Empresa   @relation(fields: [empresaId], references: [id])
+
+  @@index([empresaId])
 }
 
 model Empleado {
@@ -469,12 +576,21 @@ enum TipoServicio {
   VEEAM
   VMWARE
   HYPER_V
+  WIFI
   OTRO
 }
 
 enum TipoEquipoServicio {
   SERVIDOR_FISICO
   MAQUINA_VIRTUAL
+}
+
+enum TipoEquipoCredencial {
+  SERVIDOR_FISICO
+  MAQUINA_VIRTUAL
+  EQUIPO_RED
+  EQUIPO_USUARIO
+  SERVICIO
 }
 
 // Servidores físicos
@@ -484,9 +600,10 @@ model ServidorFisico {
   ip               String?
   rol              String? // Rol principal del servidor
   ubicacion        String? // Ubicación física
-  serie            String?      @unique
+  serie            String?
   garantia         DateTime? // Fecha de vencimiento de garantía
   estado           EstadoEquipo @default(PRODUCCION)
+  empresaId        String
   fechaAlta        DateTime     @default(now())
   fechaBaja        DateTime?
   notasTecnicas    String? // Ej: "no apagar", "tiene backup en Veeam"
@@ -502,11 +619,15 @@ model ServidorFisico {
   // Relaciones
   maquinasVirtuales MaquinaVirtual[]
   servicios         Servicio[]       @relation("ServidorFisicoServicios")
+  credenciales      Credencial[]
+  empresa           Empresa          @relation(fields: [empresaId], references: [id])
 
   @@index([nombre])
   @@index([ip])
   @@index([estado])
   @@index([serie])
+  @@index([empresaId])
+  @@unique([empresaId, serie])
 }
 
 // Máquinas virtuales
@@ -517,6 +638,7 @@ model MaquinaVirtual {
   sistemaOperativo String?
   rol              String? // DC, SQL, Zabbix, Proxy, etc.
   estado           EstadoEquipo @default(PRODUCCION)
+  empresaId        String
   fechaAlta        DateTime     @default(now())
   fechaBaja        DateTime?
   notasTecnicas    String?
@@ -529,13 +651,16 @@ model MaquinaVirtual {
   updatedAt        DateTime     @updatedAt
 
   // Relaciones
-  host      ServidorFisico? @relation(fields: [hostId], references: [id], onDelete: SetNull)
-  servicios Servicio[]      @relation("MaquinaVirtualServicios")
+  host         ServidorFisico? @relation(fields: [hostId], references: [id], onDelete: SetNull)
+  servicios    Servicio[]      @relation("MaquinaVirtualServicios")
+  credenciales Credencial[]
+  empresa      Empresa         @relation(fields: [empresaId], references: [id])
 
   @@index([nombre])
   @@index([ip])
   @@index([estado])
   @@index([hostId])
+  @@index([empresaId])
 }
 
 // Equipos de red
@@ -545,10 +670,11 @@ model EquipoRed {
   tipo          TipoEquipoRed
   ip            String?
   ubicacion     String?
-  serie         String?       @unique
+  serie         String?
   fabricante    String?
   modelo        String?
   estado        EstadoEquipo  @default(PRODUCCION)
+  empresaId     String
   fechaAlta     DateTime      @default(now())
   fechaBaja     DateTime?
   notasTecnicas String?
@@ -557,11 +683,17 @@ model EquipoRed {
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
 
+  // Relaciones
+  credenciales Credencial[]
+  empresa      Empresa      @relation(fields: [empresaId], references: [id])
+
   @@index([nombre])
   @@index([ip])
   @@index([tipo])
   @@index([estado])
   @@index([serie])
+  @@index([empresaId])
+  @@unique([empresaId, serie])
 }
 
 // Equipos de usuario
@@ -571,10 +703,11 @@ model EquipoUsuario {
   tipo             TipoEquipoUsuario
   ip               String?
   ubicacion        String?
-  serie            String?           @unique
+  serie            String?
   fabricante       String?
   modelo           String?
   estado           EstadoEquipo      @default(PRODUCCION)
+  empresaId        String
   fechaAlta        DateTime          @default(now())
   fechaBaja        DateTime?
   notasTecnicas    String?
@@ -585,7 +718,9 @@ model EquipoUsuario {
   updatedAt        DateTime          @updatedAt
 
   // Relaciones
-  usuario Empleado? @relation(fields: [usuarioId], references: [id], onDelete: SetNull)
+  usuario      Empleado?    @relation(fields: [usuarioId], references: [id], onDelete: SetNull)
+  credenciales Credencial[]
+  empresa      Empresa      @relation(fields: [empresaId], references: [id])
 
   @@index([nombre])
   @@index([ip])
@@ -594,22 +729,26 @@ model EquipoUsuario {
   @@index([usuarioId])
   @@index([area])
   @@index([serie])
+  @@index([empresaId])
+  @@unique([empresaId, serie])
 }
 
-// Servicios que corren en servidores/VMs
+// Servicios que corren en servidores/VMs (o independientes, ej: WiFi)
 model Servicio {
   id            String       @id @default(cuid())
   nombre        String
   tipo          TipoServicio
   version       String?
   puerto        Int?
+  ssid          String? // Solo para tipo WIFI
   estado        EstadoEquipo @default(PRODUCCION)
+  empresaId     String
   fechaAlta     DateTime     @default(now())
   fechaBaja     DateTime?
   notasTecnicas String?
 
-  // Relación con servidor físico o VM
-  tipoEquipo       TipoEquipoServicio
+  // Relación opcional con servidor físico o VM (ej: WiFi no está atado a ningún equipo)
+  tipoEquipo       TipoEquipoServicio?
   servidorFisicoId String?
   maquinaVirtualId String?
 
@@ -619,10 +758,67 @@ model Servicio {
   // Relaciones
   servidorFisico ServidorFisico? @relation("ServidorFisicoServicios", fields: [servidorFisicoId], references: [id], onDelete: Cascade)
   maquinaVirtual MaquinaVirtual? @relation("MaquinaVirtualServicios", fields: [maquinaVirtualId], references: [id], onDelete: Cascade)
+  credenciales   Credencial[]
+  empresa        Empresa         @relation(fields: [empresaId], references: [id])
 
   @@index([nombre])
   @@index([tipo])
   @@index([estado])
   @@index([servidorFisicoId])
   @@index([maquinaVirtualId])
+  @@index([empresaId])
+}
+
+// Credenciales cifradas asociadas a equipos o servicios del CMDB
+model Credencial {
+  id              String   @id @default(cuid())
+  nombre          String // Etiqueta: "Admin local", "Usuario SA", "WiFi Visitas"
+  usuario         String?
+  passwordCifrada String // Ciphertext base64 (AES-256-GCM)
+  iv              String // Base64
+  authTag         String // Base64
+  notas           String?
+
+  tipoEquipo       TipoEquipoCredencial
+  servidorFisicoId String?
+  maquinaVirtualId String?
+  equipoRedId      String?
+  equipoUsuarioId  String?
+  servicioId       String?
+  empresaId        String
+
+  creadoPorId   Int
+  creadoEn      DateTime @default(now())
+  actualizadoEn DateTime @updatedAt
+
+  // Relaciones
+  creadoPor      Usuario          @relation(fields: [creadoPorId], references: [id])
+  servidorFisico ServidorFisico?  @relation(fields: [servidorFisicoId], references: [id], onDelete: Cascade)
+  maquinaVirtual MaquinaVirtual?  @relation(fields: [maquinaVirtualId], references: [id], onDelete: Cascade)
+  equipoRed      EquipoRed?       @relation(fields: [equipoRedId], references: [id], onDelete: Cascade)
+  equipoUsuario  EquipoUsuario?   @relation(fields: [equipoUsuarioId], references: [id], onDelete: Cascade)
+  servicio       Servicio?        @relation(fields: [servicioId], references: [id], onDelete: Cascade)
+  accesos        CredencialAcceso[]
+  empresa        Empresa          @relation(fields: [empresaId], references: [id])
+
+  @@index([tipoEquipo])
+  @@index([servidorFisicoId])
+  @@index([maquinaVirtualId])
+  @@index([equipoRedId])
+  @@index([equipoUsuarioId])
+  @@index([servicioId])
+  @@index([empresaId])
+}
+
+// Auditoría liviana: quién reveló qué contraseña y cuándo
+model CredencialAcceso {
+  id           String   @id @default(cuid())
+  credencialId String
+  usuarioId    Int
+  fecha        DateTime @default(now())
+
+  credencial Credencial @relation(fields: [credencialId], references: [id], onDelete: Cascade)
+  usuario    Usuario    @relation(fields: [usuarioId], references: [id])
+
+  @@index([credencialId])
 }

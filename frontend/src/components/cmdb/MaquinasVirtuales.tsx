@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { PlusIcon, MagnifyingGlassIcon, PencilIcon, TrashIcon, CpuChipIcon, LinkIcon } from '@heroicons/react/24/outline';
+import { PlusIcon, MagnifyingGlassIcon, PencilIcon, TrashIcon, CpuChipIcon, LinkIcon, KeyIcon } from '@heroicons/react/24/outline';
 import {
   getMaquinasVirtuales,
   createMaquinaVirtual,
@@ -10,6 +10,7 @@ import {
 import { useAuth } from '../../context/AuthContext';
 import MaquinaVirtualForm from './MaquinaVirtualForm';
 import RelacionesView from './RelacionesView';
+import CredencialesModal from './CredencialesModal';
 
 const MaquinasVirtuales: React.FC = () => {
   const { token, user } = useAuth();
@@ -24,6 +25,7 @@ const MaquinasVirtuales: React.FC = () => {
   const [maquinaEdit, setMaquinaEdit] = useState<MaquinaVirtual | null>(null);
   const [showRelaciones, setShowRelaciones] = useState(false);
   const [maquinaRelaciones, setMaquinaRelaciones] = useState<string | null>(null);
+  const [maquinaCredenciales, setMaquinaCredenciales] = useState<MaquinaVirtual | null>(null);
   const [total, setTotal] = useState(0);
 
   useEffect(() => {
@@ -188,6 +190,13 @@ const MaquinasVirtuales: React.FC = () => {
                     >
                       <LinkIcon className="h-5 w-5" />
                     </button>
+                    <button
+                      onClick={() => setMaquinaCredenciales(maquina)}
+                      className="text-amber-600 hover:text-amber-900"
+                      title="Credenciales"
+                    >
+                      <KeyIcon className="h-5 w-5" />
+                    </button>
                     {canManage && (
                       <>
                         <button onClick={() => handleEditar(maquina)} className="text-blue-600 hover:text-blue-900">
@@ -225,6 +234,16 @@ const MaquinasVirtuales: React.FC = () => {
             setShowRelaciones(false);
             setMaquinaRelaciones(null);
           }}
+        />
+      )}
+
+      {maquinaCredenciales && (
+        <CredencialesModal
+          tipoEquipo="MAQUINA_VIRTUAL"
+          equipoId={maquinaCredenciales.id}
+          nombre={maquinaCredenciales.nombre}
+          canManage={canManage}
+          onClose={() => setMaquinaCredenciales(null)}
         />
       )}
     </div>

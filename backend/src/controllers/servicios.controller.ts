@@ -6,11 +6,12 @@ import prisma from '../lib/prisma';
 export const obtenerServicios = async (req: Request, res: Response) => {
   try {
     const { estado, tipo, tipoEquipo, servidorFisicoId, maquinaVirtualId, buscar, page = 1, limit = 50 } = req.query;
+    const empresaId = (req as any).empresaId;
 
     const skip = (Number(page) - 1) * Number(limit);
     const take = Number(limit);
 
-    const where: any = {};
+    const where: any = { empresaId };
 
     if (estado) {
       where.estado = estado;
@@ -70,6 +71,7 @@ export const obtenerServicios = async (req: Request, res: Response) => {
 export const obtenerServicioPorId = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
+    const empresaId = (req as any).empresaId;
 
     const servicio = await prisma.servicio.findUnique({
       where: { id },
@@ -79,7 +81,7 @@ export const obtenerServicioPorId = async (req: Request, res: Response) => {
       }
     });
 
-    if (!servicio) {
+    if (!servicio || servicio.empresaId !== empresaId) {
       return res.status(404).json({ error: 'Servicio no encontrado' });
     }
 
@@ -93,11 +95,13 @@ export const obtenerServicioPorId = async (req: Request, res: Response) => {
 // Crear servicio
 export const crearServicio = async (req: Request, res: Response) => {
   try {
+    const empresaId = (req as any).empresaId;
     const {
       nombre,
       tipo,
       version,
       puerto,
+      ssid,
       estado,
       fechaAlta,
       fechaBaja,
@@ -107,9 +111,9 @@ export const crearServicio = async (req: Request, res: Response) => {
       maquinaVirtualId
     } = req.body;
 
-    // Validar campos obligatorios
-    if (!nombre || !tipo || !tipoEquipo) {
-      return res.status(400).json({ error: 'El nombre, tipo y tipoEquipo son obligatorios' });
+    // Validar campos obligatorios (tipoEquipo es opcional: permite servicios independientes, ej. WiFi)
+    if (!nombre || !tipo) {
+      return res.status(400).json({ error: 'El nombre y el tipo son obligatorios' });
     }
 
     // Validar que se proporcione solo uno de los dos: servidorFisicoId o maquinaVirtualId
@@ -121,13 +125,13 @@ export const crearServicio = async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Se debe proporcionar maquinaVirtualId para servicios en máquinas virtuales' });
     }
 
-    // Verificar que el servidor físico o VM existe
+    // Verificar que el servidor físico o VM existe en este cliente
     if (servidorFisicoId) {
       const servidor = await prisma.servidorFisico.findUnique({
         where: { id: servidorFisicoId }
       });
 
-      if (!servidor) {
+      if (!servidor || servidor.empresaId !== empresaId) {
         return res.status(404).json({ error: 'Servidor físico no encontrado' });
       }
     }
@@ -137,22 +141,24 @@ export const crearServicio = async (req: Request, res: Response) => {
         where: { id: maquinaVirtualId }
       });
 
-      if (!maquina) {
+      if (!maquina || maquina.empresaId !== empresaId) {
         return res.status(404).json({ error: 'Máquina virtual no encontrada' });
       }
     }
 
     const servicio = await prisma.servicio.create({
       data: {
+        empresaId,
         nombre,
         tipo,
         version,
         puerto: puerto ? Number(puerto) : null,
+        ssid: ssid || null,
         estado: estado || 'PRODUCCION',
         fechaAlta: fechaAlta ? new Date(fechaAlta) : new Date(),
         fechaBaja: fechaBaja ? new Date(fechaBaja) : null,
         notasTecnicas,
-        tipoEquipo,
+        tipoEquipo: tipoEquipo || null,
         servidorFisicoId: tipoEquipo === 'SERVIDOR_FISICO' ? servidorFisicoId : null,
         maquinaVirtualId: tipoEquipo === 'MAQUINA_VIRTUAL' ? maquinaVirtualId : null
       },
@@ -173,11 +179,13 @@ export const crearServicio = async (req: Request, res: Response) => {
 export const actualizarServicio = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
+    const empresaId = (req as any).empresaId;
     const {
       nombre,
       tipo,
       version,
       puerto,
+      ssid,
       estado,
       fechaAlta,
       fechaBaja,
@@ -192,7 +200,7 @@ export const actualizarServicio = async (req: Request, res: Response) => {
       where: { id }
     });
 
-    if (!servicioExistente) {
+    if (!servicioExistente || servicioExistente.empresaId !== empresaId) {
       return res.status(404).json({ error: 'Servicio no encontrado' });
     }
 
@@ -205,13 +213,13 @@ export const actualizarServicio = async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Se debe proporcionar maquinaVirtualId para servicios en máquinas virtuales' });
     }
 
-    // Verificar que el servidor físico o VM existe
+    // Verificar que el servidor físico o VM existe en este cliente
     if (servidorFisicoId) {
       const servidor = await prisma.servidorFisico.findUnique({
         where: { id: servidorFisicoId }
       });
 
-      if (!servidor) {
+      if (!servidor || servidor.empresaId !== empresaId) {
         return res.status(404).json({ error: 'Servidor físico no encontrado' });
       }
     }
@@ -221,7 +229,7 @@ export const actualizarServicio = async (req: Request, res: Response) => {
         where: { id: maquinaVirtualId }
       });
 
-      if (!maquina) {
+      if (!maquina || maquina.empresaId !== empresaId) {
         return res.status(404).json({ error: 'Máquina virtual no encontrada' });
       }
     }
@@ -233,11 +241,12 @@ export const actualizarServicio = async (req: Request, res: Response) => {
         tipo,
         version,
         puerto: puerto ? Number(puerto) : null,
+        ssid: ssid || null,
         estado,
         fechaAlta: fechaAlta ? new Date(fechaAlta) : undefined,
         fechaBaja: fechaBaja ? new Date(fechaBaja) : null,
         notasTecnicas,
-        tipoEquipo,
+        tipoEquipo: tipoEquipo || null,
         servidorFisicoId: tipoEquipo === 'SERVIDOR_FISICO' ? servidorFisicoId : null,
         maquinaVirtualId: tipoEquipo === 'MAQUINA_VIRTUAL' ? maquinaVirtualId : null
       },
@@ -258,13 +267,14 @@ export const actualizarServicio = async (req: Request, res: Response) => {
 export const eliminarServicio = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
+    const empresaId = (req as any).empresaId;
 
     // Verificar que el servicio existe
     const servicio = await prisma.servicio.findUnique({
       where: { id }
     });
 
-    if (!servicio) {
+    if (!servicio || servicio.empresaId !== empresaId) {
       return res.status(404).json({ error: 'Servicio no encontrado' });
     }
 
@@ -278,4 +288,3 @@ export const eliminarServicio = async (req: Request, res: Response) => {
     res.status(500).json({ error: 'Error interno del servidor' });
   }
 };
-

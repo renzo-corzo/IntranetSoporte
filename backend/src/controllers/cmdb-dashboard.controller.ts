@@ -5,6 +5,8 @@ import prisma from '../lib/prisma';
 // Obtener estadísticas del CMDB
 export const getDashboardStats = async (req: Request, res: Response) => {
   try {
+    const empresaId = (req as any).empresaId;
+
     // Contar por tipo
     const [
       totalServidores,
@@ -19,25 +21,26 @@ export const getDashboardStats = async (req: Request, res: Response) => {
       equiposUsuarioProduccion,
       serviciosProduccion
     ] = await Promise.all([
-      prisma.servidorFisico.count(),
-      prisma.maquinaVirtual.count(),
-      prisma.equipoRed.count(),
-      prisma.equipoUsuario.count(),
-      prisma.servicio.count(),
-      prisma.servidorFisico.count({ where: { estado: 'PRODUCCION' } }),
-      prisma.servidorFisico.count({ where: { estado: 'FUERA_DE_SERVICIO' } }),
-      prisma.maquinaVirtual.count({ where: { estado: 'PRODUCCION' } }),
-      prisma.equipoRed.count({ where: { estado: 'PRODUCCION' } }),
-      prisma.equipoUsuario.count({ where: { estado: 'PRODUCCION' } }),
-      prisma.servicio.count({ where: { estado: 'PRODUCCION' } })
+      prisma.servidorFisico.count({ where: { empresaId } }),
+      prisma.maquinaVirtual.count({ where: { empresaId } }),
+      prisma.equipoRed.count({ where: { empresaId } }),
+      prisma.equipoUsuario.count({ where: { empresaId } }),
+      prisma.servicio.count({ where: { empresaId } }),
+      prisma.servidorFisico.count({ where: { empresaId, estado: 'PRODUCCION' } }),
+      prisma.servidorFisico.count({ where: { empresaId, estado: 'FUERA_DE_SERVICIO' } }),
+      prisma.maquinaVirtual.count({ where: { empresaId, estado: 'PRODUCCION' } }),
+      prisma.equipoRed.count({ where: { empresaId, estado: 'PRODUCCION' } }),
+      prisma.equipoUsuario.count({ where: { empresaId, estado: 'PRODUCCION' } }),
+      prisma.servicio.count({ where: { empresaId, estado: 'PRODUCCION' } })
     ]);
 
     // Obtener equipos con garantía próxima a vencer (próximos 90 días)
     const fechaLimite = new Date();
     fechaLimite.setDate(fechaLimite.getDate() + 90);
-    
+
     const garantiasProximas = await prisma.servidorFisico.findMany({
       where: {
+        empresaId,
         garantia: {
           not: null,
           lte: fechaLimite,
@@ -57,7 +60,7 @@ export const getDashboardStats = async (req: Request, res: Response) => {
 
     // Obtener equipos fuera de servicio
     const equiposFueraServicio = await prisma.servidorFisico.findMany({
-      where: { estado: 'FUERA_DE_SERVICIO' },
+      where: { empresaId, estado: 'FUERA_DE_SERVICIO' },
       select: {
         id: true,
         nombre: true,
@@ -70,18 +73,18 @@ export const getDashboardStats = async (req: Request, res: Response) => {
     // Distribución por estado
     const distribucionEstado = {
       PRODUCCION: servidoresProduccion + vmsProduccion + equiposRedProduccion + equiposUsuarioProduccion,
-      TEST: await prisma.servidorFisico.count({ where: { estado: 'TEST' } }) +
-            await prisma.maquinaVirtual.count({ where: { estado: 'TEST' } }) +
-            await prisma.equipoRed.count({ where: { estado: 'TEST' } }) +
-            await prisma.equipoUsuario.count({ where: { estado: 'TEST' } }),
+      TEST: await prisma.servidorFisico.count({ where: { empresaId, estado: 'TEST' } }) +
+            await prisma.maquinaVirtual.count({ where: { empresaId, estado: 'TEST' } }) +
+            await prisma.equipoRed.count({ where: { empresaId, estado: 'TEST' } }) +
+            await prisma.equipoUsuario.count({ where: { empresaId, estado: 'TEST' } }),
       FUERA_DE_SERVICIO: servidoresFueraServicio +
-                         await prisma.maquinaVirtual.count({ where: { estado: 'FUERA_DE_SERVICIO' } }) +
-                         await prisma.equipoRed.count({ where: { estado: 'FUERA_DE_SERVICIO' } }) +
-                         await prisma.equipoUsuario.count({ where: { estado: 'FUERA_DE_SERVICIO' } }),
-      MANTENIMIENTO: await prisma.servidorFisico.count({ where: { estado: 'MANTENIMIENTO' } }) +
-                     await prisma.maquinaVirtual.count({ where: { estado: 'MANTENIMIENTO' } }) +
-                     await prisma.equipoRed.count({ where: { estado: 'MANTENIMIENTO' } }) +
-                     await prisma.equipoUsuario.count({ where: { estado: 'MANTENIMIENTO' } })
+                         await prisma.maquinaVirtual.count({ where: { empresaId, estado: 'FUERA_DE_SERVICIO' } }) +
+                         await prisma.equipoRed.count({ where: { empresaId, estado: 'FUERA_DE_SERVICIO' } }) +
+                         await prisma.equipoUsuario.count({ where: { empresaId, estado: 'FUERA_DE_SERVICIO' } }),
+      MANTENIMIENTO: await prisma.servidorFisico.count({ where: { empresaId, estado: 'MANTENIMIENTO' } }) +
+                     await prisma.maquinaVirtual.count({ where: { empresaId, estado: 'MANTENIMIENTO' } }) +
+                     await prisma.equipoRed.count({ where: { empresaId, estado: 'MANTENIMIENTO' } }) +
+                     await prisma.equipoUsuario.count({ where: { empresaId, estado: 'MANTENIMIENTO' } })
     };
 
     // Distribución por tipo de equipo
@@ -95,6 +98,7 @@ export const getDashboardStats = async (req: Request, res: Response) => {
 
     // Obtener ubicaciones únicas
     const ubicaciones = await prisma.servidorFisico.findMany({
+      where: { empresaId },
       select: { ubicacion: true },
       distinct: ['ubicacion']
     });
@@ -103,7 +107,7 @@ export const getDashboardStats = async (req: Request, res: Response) => {
     for (const ubic of ubicaciones) {
       if (ubic.ubicacion) {
         const count = await prisma.servidorFisico.count({
-          where: { ubicacion: ubic.ubicacion }
+          where: { empresaId, ubicacion: ubic.ubicacion }
         });
         distribucionUbicacion[ubic.ubicacion] = count;
       }
@@ -148,7 +152,8 @@ export const getDashboardStats = async (req: Request, res: Response) => {
 export const busquedaGlobal = async (req: Request, res: Response) => {
   try {
     const { q, tipo, limit = 20 } = req.query;
-    
+    const empresaId = (req as any).empresaId;
+
     if (!q || typeof q !== 'string') {
       return res.status(400).json({ error: 'Parámetro de búsqueda requerido' });
     }
@@ -160,6 +165,7 @@ export const busquedaGlobal = async (req: Request, res: Response) => {
     if (!tipo || tipo === 'servidores') {
       const servidores = await prisma.servidorFisico.findMany({
         where: {
+          empresaId,
           OR: [
             { nombre: { contains: busqueda, mode: 'insensitive' } },
             { ip: { contains: busqueda, mode: 'insensitive' } },
@@ -183,6 +189,7 @@ export const busquedaGlobal = async (req: Request, res: Response) => {
     if (!tipo || tipo === 'vms') {
       const vms = await prisma.maquinaVirtual.findMany({
         where: {
+          empresaId,
           OR: [
             { nombre: { contains: busqueda, mode: 'insensitive' } },
             { ip: { contains: busqueda, mode: 'insensitive' } },
@@ -204,6 +211,7 @@ export const busquedaGlobal = async (req: Request, res: Response) => {
     if (!tipo || tipo === 'red') {
       const equiposRed = await prisma.equipoRed.findMany({
         where: {
+          empresaId,
           OR: [
             { nombre: { contains: busqueda, mode: 'insensitive' } },
             { ip: { contains: busqueda, mode: 'insensitive' } },
@@ -228,6 +236,7 @@ export const busquedaGlobal = async (req: Request, res: Response) => {
     if (!tipo || tipo === 'usuario') {
       const equiposUsuario = await prisma.equipoUsuario.findMany({
         where: {
+          empresaId,
           OR: [
             { nombre: { contains: busqueda, mode: 'insensitive' } },
             { ip: { contains: busqueda, mode: 'insensitive' } },
@@ -245,12 +254,12 @@ export const busquedaGlobal = async (req: Request, res: Response) => {
           }
         }
       });
-      resultados.push(...equiposUsuario.map(e => ({ 
+      resultados.push(...equiposUsuario.map(e => ({
         id: e.id,
         nombre: e.nombre,
         ip: e.ip,
         estado: e.estado,
-        tipo: 'usuario', 
+        tipo: 'usuario',
         tipoLabel: `Equipo de Usuario (${e.tipo})`,
         usuarioNombre: e.usuario ? `${e.usuario.nombre} ${e.usuario.apellido}` : null
       })));
@@ -260,6 +269,7 @@ export const busquedaGlobal = async (req: Request, res: Response) => {
     if (!tipo || tipo === 'servicios') {
       const servicios = await prisma.servicio.findMany({
         where: {
+          empresaId,
           OR: [
             { nombre: { contains: busqueda, mode: 'insensitive' } }
           ]
@@ -273,15 +283,15 @@ export const busquedaGlobal = async (req: Request, res: Response) => {
         }
       });
       // Filtrar por tipo si coincide con la búsqueda
-      const serviciosFiltrados = servicios.filter(s => 
-        s.nombre.toLowerCase().includes(busqueda) || 
+      const serviciosFiltrados = servicios.filter(s =>
+        s.nombre.toLowerCase().includes(busqueda) ||
         s.tipo.toLowerCase().includes(busqueda)
       );
-      resultados.push(...serviciosFiltrados.map(s => ({ 
+      resultados.push(...serviciosFiltrados.map(s => ({
         id: s.id,
         nombre: s.nombre,
         estado: s.estado,
-        tipo: 'servicio', 
+        tipo: 'servicio',
         tipoLabel: `Servicio (${s.tipo})`,
         tipoServicio: s.tipo
       })));
@@ -297,4 +307,3 @@ export const busquedaGlobal = async (req: Request, res: Response) => {
     res.status(500).json({ error: 'Error interno del servidor' });
   }
 };
-

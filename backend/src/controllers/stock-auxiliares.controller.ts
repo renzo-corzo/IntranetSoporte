@@ -6,8 +6,9 @@ import prisma from '../lib/prisma';
 
 export const obtenerCategorias = async (req: Request, res: Response) => {
   try {
+    const empresaId = (req as any).empresaId;
     const categorias = await prisma.categoriaStock.findMany({
-      where: { activo: true },
+      where: { empresaId, activo: true },
       include: {
         _count: {
           select: { productos: true }
@@ -25,10 +26,12 @@ export const obtenerCategorias = async (req: Request, res: Response) => {
 
 export const crearCategoria = async (req: Request, res: Response) => {
   try {
+    const empresaId = (req as any).empresaId;
     const { nombre, descripcion, icono, color } = req.body;
 
     const categoria = await prisma.categoriaStock.create({
       data: {
+        empresaId,
         nombre,
         descripcion,
         icono,
@@ -50,7 +53,13 @@ export const crearCategoria = async (req: Request, res: Response) => {
 export const actualizarCategoria = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
+    const empresaId = (req as any).empresaId;
     const { nombre, descripcion, icono, color, activo } = req.body;
+
+    const existente = await prisma.categoriaStock.findUnique({ where: { id: Number(id) } });
+    if (!existente || existente.empresaId !== empresaId) {
+      return res.status(404).json({ error: 'Categoría no encontrada' });
+    }
 
     const categoria = await prisma.categoriaStock.update({
       where: { id: Number(id) },
@@ -73,6 +82,12 @@ export const actualizarCategoria = async (req: Request, res: Response) => {
 export const eliminarCategoria = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
+    const empresaId = (req as any).empresaId;
+
+    const existente = await prisma.categoriaStock.findUnique({ where: { id: Number(id) } });
+    if (!existente || existente.empresaId !== empresaId) {
+      return res.status(404).json({ error: 'Categoría no encontrada' });
+    }
 
     // Verificar que no tenga productos asociados
     const productos = await prisma.productoStock.count({
@@ -80,8 +95,8 @@ export const eliminarCategoria = async (req: Request, res: Response) => {
     });
 
     if (productos > 0) {
-      return res.status(400).json({ 
-        error: 'No se puede eliminar una categoría que tiene productos asociados' 
+      return res.status(400).json({
+        error: 'No se puede eliminar una categoría que tiene productos asociados'
       });
     }
 
@@ -100,8 +115,9 @@ export const eliminarCategoria = async (req: Request, res: Response) => {
 
 export const obtenerUnidadesMedida = async (req: Request, res: Response) => {
   try {
+    const empresaId = (req as any).empresaId;
     const unidades = await prisma.unidadMedida.findMany({
-      where: { activo: true },
+      where: { empresaId, activo: true },
       include: {
         _count: {
           select: { productos: true }
@@ -119,10 +135,12 @@ export const obtenerUnidadesMedida = async (req: Request, res: Response) => {
 
 export const crearUnidadMedida = async (req: Request, res: Response) => {
   try {
+    const empresaId = (req as any).empresaId;
     const { nombre, abreviacion, tipo } = req.body;
 
     const unidad = await prisma.unidadMedida.create({
       data: {
+        empresaId,
         nombre,
         abreviacion,
         tipo
@@ -143,7 +161,13 @@ export const crearUnidadMedida = async (req: Request, res: Response) => {
 export const actualizarUnidadMedida = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
+    const empresaId = (req as any).empresaId;
     const { nombre, abreviacion, tipo, activo } = req.body;
+
+    const existente = await prisma.unidadMedida.findUnique({ where: { id: Number(id) } });
+    if (!existente || existente.empresaId !== empresaId) {
+      return res.status(404).json({ error: 'Unidad de medida no encontrada' });
+    }
 
     const unidad = await prisma.unidadMedida.update({
       where: { id: Number(id) },
@@ -166,8 +190,9 @@ export const actualizarUnidadMedida = async (req: Request, res: Response) => {
 
 export const obtenerProveedores = async (req: Request, res: Response) => {
   try {
+    const empresaId = (req as any).empresaId;
     const proveedores = await prisma.proveedorStock.findMany({
-      where: { activo: true },
+      where: { empresaId, activo: true },
       include: {
         _count: {
           select: { productos: true }
@@ -185,10 +210,12 @@ export const obtenerProveedores = async (req: Request, res: Response) => {
 
 export const crearProveedor = async (req: Request, res: Response) => {
   try {
+    const empresaId = (req as any).empresaId;
     const { nombre, contacto, telefono, email, direccion, sitioWeb } = req.body;
 
     const proveedor = await prisma.proveedorStock.create({
       data: {
+        empresaId,
         nombre,
         contacto,
         telefono,
@@ -212,7 +239,13 @@ export const crearProveedor = async (req: Request, res: Response) => {
 export const actualizarProveedor = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
+    const empresaId = (req as any).empresaId;
     const { nombre, contacto, telefono, email, direccion, sitioWeb, activo } = req.body;
+
+    const existente = await prisma.proveedorStock.findUnique({ where: { id: Number(id) } });
+    if (!existente || existente.empresaId !== empresaId) {
+      return res.status(404).json({ error: 'Proveedor no encontrado' });
+    }
 
     const proveedor = await prisma.proveedorStock.update({
       where: { id: Number(id) },
@@ -238,8 +271,9 @@ export const actualizarProveedor = async (req: Request, res: Response) => {
 
 export const obtenerUbicaciones = async (req: Request, res: Response) => {
   try {
+    const empresaId = (req as any).empresaId;
     const ubicaciones = await prisma.ubicacionStock.findMany({
-      where: { activo: true },
+      where: { empresaId, activo: true },
       include: {
         _count: {
           select: { productos: true }
@@ -257,10 +291,12 @@ export const obtenerUbicaciones = async (req: Request, res: Response) => {
 
 export const crearUbicacion = async (req: Request, res: Response) => {
   try {
+    const empresaId = (req as any).empresaId;
     const { nombre, descripcion, tipo } = req.body;
 
     const ubicacion = await prisma.ubicacionStock.create({
       data: {
+        empresaId,
         nombre,
         descripcion,
         tipo
@@ -281,7 +317,13 @@ export const crearUbicacion = async (req: Request, res: Response) => {
 export const actualizarUbicacion = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
+    const empresaId = (req as any).empresaId;
     const { nombre, descripcion, tipo, activo } = req.body;
+
+    const existente = await prisma.ubicacionStock.findUnique({ where: { id: Number(id) } });
+    if (!existente || existente.empresaId !== empresaId) {
+      return res.status(404).json({ error: 'Ubicación no encontrada' });
+    }
 
     const ubicacion = await prisma.ubicacionStock.update({
       where: { id: Number(id) },
@@ -304,8 +346,9 @@ export const actualizarUbicacion = async (req: Request, res: Response) => {
 
 export const obtenerTiposMovimiento = async (req: Request, res: Response) => {
   try {
+    const empresaId = (req as any).empresaId;
     const tipos = await prisma.tipoMovimiento.findMany({
-      where: { activo: true },
+      where: { empresaId, activo: true },
       include: {
         _count: {
           select: { movimientos: true }
@@ -323,18 +366,20 @@ export const obtenerTiposMovimiento = async (req: Request, res: Response) => {
 
 export const crearTipoMovimiento = async (req: Request, res: Response) => {
   try {
-    const { 
-      nombre, 
-      descripcion, 
-      afectaStock, 
-      requiereOrigen, 
-      requiereDestino, 
-      color, 
-      icono 
+    const empresaId = (req as any).empresaId;
+    const {
+      nombre,
+      descripcion,
+      afectaStock,
+      requiereOrigen,
+      requiereDestino,
+      color,
+      icono
     } = req.body;
 
     const tipo = await prisma.tipoMovimiento.create({
       data: {
+        empresaId,
         nombre,
         descripcion,
         afectaStock,
@@ -359,16 +404,22 @@ export const crearTipoMovimiento = async (req: Request, res: Response) => {
 export const actualizarTipoMovimiento = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const { 
-      nombre, 
-      descripcion, 
-      afectaStock, 
-      requiereOrigen, 
-      requiereDestino, 
-      color, 
-      icono, 
-      activo 
+    const empresaId = (req as any).empresaId;
+    const {
+      nombre,
+      descripcion,
+      afectaStock,
+      requiereOrigen,
+      requiereDestino,
+      color,
+      icono,
+      activo
     } = req.body;
+
+    const existente = await prisma.tipoMovimiento.findUnique({ where: { id: Number(id) } });
+    if (!existente || existente.empresaId !== empresaId) {
+      return res.status(404).json({ error: 'Tipo de movimiento no encontrado' });
+    }
 
     const tipo = await prisma.tipoMovimiento.update({
       where: { id: Number(id) },
@@ -395,6 +446,7 @@ export const actualizarTipoMovimiento = async (req: Request, res: Response) => {
 
 export const obtenerDashboardStock = async (req: Request, res: Response) => {
   try {
+    const empresaId = (req as any).empresaId;
     const [
       totalProductos,
       productosActivos,
@@ -408,17 +460,17 @@ export const obtenerDashboardStock = async (req: Request, res: Response) => {
       ultimosMovimientos
     ] = await Promise.all([
       // Total de productos
-      prisma.productoStock.count(),
-      
+      prisma.productoStock.count({ where: { empresaId } }),
+
       // Productos activos
       prisma.productoStock.count({
-        where: { estado: 'Activo' }
+        where: { empresaId, estado: 'Activo' }
       }),
-      
+
       // Stock bajo: productos con stockActual > 0 y stockActual < stockMinimo
       prisma.productoStock
         .findMany({
-          where: { stockActual: { gt: 0 } },
+          where: { empresaId, stockActual: { gt: 0 } },
           select: { stockActual: true, stockMinimo: true }
         })
         .then((rows) =>
@@ -426,37 +478,39 @@ export const obtenerDashboardStock = async (req: Request, res: Response) => {
             (r) => r.stockMinimo !== null && r.stockActual < (r.stockMinimo as number)
           ).length
         ),
-      
+
       // Stock agotado
       prisma.productoStock.count({
-        where: { stockActual: 0 }
+        where: { empresaId, stockActual: 0 }
       }),
-      
+
       // Alertas activas
       prisma.alertaStock.count({
-        where: { activa: true }
+        where: { empresaId, activa: true }
       }),
-      
+
       // Movimientos de hoy
       prisma.movimientoStock.count({
         where: {
+          empresaId,
           fechaMovimiento: {
             gte: new Date(new Date().setHours(0, 0, 0, 0))
           }
         }
       }),
-      
+
       // Valor total del stock
       prisma.productoStock.aggregate({
         _sum: {
           precioCompra: true
         },
         where: {
+          empresaId,
           precioCompra: { not: null },
           stockActual: { gt: 0 }
         }
       }),
-      
+
       // Productos por categoría
       prisma.categoriaStock.findMany({
         include: {
@@ -464,9 +518,9 @@ export const obtenerDashboardStock = async (req: Request, res: Response) => {
             select: { productos: true }
           }
         },
-        where: { activo: true }
+        where: { empresaId, activo: true }
       }),
-      
+
       // Productos por ubicación
       prisma.ubicacionStock.findMany({
         include: {
@@ -474,11 +528,12 @@ export const obtenerDashboardStock = async (req: Request, res: Response) => {
             select: { productos: true }
           }
         },
-        where: { activo: true }
+        where: { empresaId, activo: true }
       }),
-      
+
       // Últimos movimientos
       prisma.movimientoStock.findMany({
+        where: { empresaId },
         include: {
           producto: {
             select: { codigo: true, nombre: true }

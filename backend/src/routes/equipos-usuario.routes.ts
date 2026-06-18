@@ -7,10 +7,12 @@ import {
   eliminarEquipoUsuario
 } from '../controllers/equipos-usuario.controller';
 import { verifyToken, requirePermission } from '../middlewares/auth.middleware';
+import { requireEmpresa } from '../middlewares/empresa.middleware';
 
 const router = Router();
 
 router.use(verifyToken);
+router.use(requireEmpresa);
 
 // 📌 Rutas: /api/equipos-usuario
 router.get('/', requirePermission(['cmdb:read', 'cmdb:manage']), obtenerEquiposUsuario);
