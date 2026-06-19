@@ -74,7 +74,7 @@ export default function Login() {
         <div className="relative z-10 w-full max-w-xs">
           {/* Logo */}
           <div className="mb-10">
-            <img src={logoBlanco} alt="Infinity Cloud" className="h-10 w-auto mb-6" />
+            <img src={logoBlanco} alt="Infinity Cloud" className="h-20 w-auto mb-6" />
             <p className="text-slate-400 mt-1">Intranet de Soporte</p>
           </div>
 
@@ -97,7 +97,7 @@ export default function Login() {
         <div className="w-full max-w-sm">
           {/* Logo mobile */}
           <div className="lg:hidden flex items-center gap-3 mb-10">
-            <img src={logoColor} alt="Infinity Cloud" className="h-8 w-auto" />
+            <img src={logoColor} alt="Infinity Cloud" className="h-14 w-auto" />
             <p className="text-slate-400 text-xs">Intranet de Soporte</p>
           </div>
 
