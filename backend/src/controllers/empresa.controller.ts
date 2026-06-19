@@ -1,5 +1,12 @@
 import { Request, Response } from 'express';
 import prisma from '../lib/prisma';
+import { MODULOS_VALIDOS } from '../middlewares/empresa.middleware';
+
+const sanitizeModulos = (modulos: unknown): string[] | undefined => {
+  if (modulos === undefined) return undefined;
+  if (!Array.isArray(modulos)) return [];
+  return modulos.filter((m): m is string => MODULOS_VALIDOS.includes(m));
+};
 
 export const obtenerEmpresas = async (req: Request, res: Response) => {
   try {
@@ -20,14 +27,18 @@ export const obtenerEmpresas = async (req: Request, res: Response) => {
 
 export const crearEmpresa = async (req: Request, res: Response) => {
   try {
-    const { nombre, descripcion } = req.body;
+    const { nombre, descripcion, modulosHabilitados } = req.body;
 
     if (!nombre || !nombre.trim()) {
       return res.status(400).json({ error: 'El nombre es obligatorio' });
     }
 
     const empresa = await prisma.empresa.create({
-      data: { nombre: nombre.trim(), descripcion }
+      data: {
+        nombre: nombre.trim(),
+        descripcion,
+        ...(sanitizeModulos(modulosHabilitados) !== undefined && { modulosHabilitados: sanitizeModulos(modulosHabilitados) })
+      }
     });
 
     res.status(201).json(empresa);
@@ -43,14 +54,15 @@ export const crearEmpresa = async (req: Request, res: Response) => {
 export const actualizarEmpresa = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const { nombre, descripcion, activo } = req.body;
+    const { nombre, descripcion, activo, modulosHabilitados } = req.body;
 
     const empresa = await prisma.empresa.update({
       where: { id },
       data: {
         nombre: nombre?.trim(),
         descripcion,
-        activo
+        activo,
+        ...(sanitizeModulos(modulosHabilitados) !== undefined && { modulosHabilitados: sanitizeModulos(modulosHabilitados) })
       }
     });
 

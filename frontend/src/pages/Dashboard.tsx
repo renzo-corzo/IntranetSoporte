@@ -1,6 +1,8 @@
 import React, { useMemo, useState } from "react";
 import { NavLink, Outlet, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import { useEmpresa } from "../context/EmpresaContext";
+import { useConfiguracion } from "../context/ConfiguracionContext";
 import EmpresaSwitcher from "../components/EmpresaSwitcher";
 import {
   HomeIcon,
@@ -24,17 +26,21 @@ type NavItem = {
   label: string;
   icon: React.ElementType;
   permission: string | string[] | null;
+  // Si está seteado, el item solo se muestra si el cliente activo tiene ese módulo habilitado.
+  modulo?: string;
+  // Si está en true, el item solo se muestra si RRHH está habilitado globalmente.
+  requiereRrhh?: boolean;
 };
 
 const NAV_ITEMS: NavItem[] = [
   { to: "/dashboard/home",           label: "Inicio",          icon: HomeIcon,                    permission: null },
-  { to: "/dashboard/relevamientos",  label: "Relevamientos",   icon: ClipboardDocumentListIcon,   permission: "ver_monitor" },
+  { to: "/dashboard/relevamientos",  label: "Relevamientos",   icon: ClipboardDocumentListIcon,   permission: "ver_monitor",                        modulo: "relevamientos" },
   { to: "/dashboard/links",          label: "Links",            icon: LinkIcon,                    permission: "ver_documentos" },
-  { to: "/dashboard/stock",          label: "Stock",            icon: CubeIcon,                    permission: ["stock:read", "ver_stock"] },
-  { to: "/dashboard/cmdb",           label: "CMDB",             icon: ServerIcon,                  permission: ["cmdb:read", "cmdb:manage"] },
-  { to: "/dashboard/tareas",         label: "Tareas",           icon: CheckCircleIcon,             permission: null },
-  { to: "/dashboard/procedimientos", label: "Procedimientos",   icon: ClipboardDocumentCheckIcon,  permission: "ver_documentos" },
-  { to: "/dashboard/vacaciones/mis", label: "Vacaciones",       icon: CalendarDaysIcon,            permission: "ver_vacaciones" },
+  { to: "/dashboard/stock",          label: "Stock",            icon: CubeIcon,                    permission: ["stock:read", "ver_stock"],          modulo: "stock" },
+  { to: "/dashboard/cmdb",           label: "CMDB",             icon: ServerIcon,                  permission: ["cmdb:read", "cmdb:manage"],         modulo: "cmdb" },
+  { to: "/dashboard/tareas",         label: "Tareas",           icon: CheckCircleIcon,             permission: null,                                 modulo: "tareas" },
+  { to: "/dashboard/procedimientos", label: "Procedimientos",   icon: ClipboardDocumentCheckIcon,  permission: "ver_documentos",                      modulo: "procedimientos" },
+  { to: "/dashboard/vacaciones/mis", label: "Vacaciones",       icon: CalendarDaysIcon,            permission: "ver_vacaciones",                      requiereRrhh: true },
   { to: "/dashboard/admin",          label: "Admin",            icon: Cog6ToothIcon,               permission: ["ver_roles", "asignar_permisos"] },
 ];
 
@@ -63,24 +69,31 @@ function useBreadcrumb(): string[] {
 
 const Dashboard: React.FC = () => {
   const { user, logout } = useAuth();
+  const { empresaActiva } = useEmpresa();
+  const { configuracion } = useConfiguracion();
   const [isCollapsed, setIsCollapsed] = useState(false);
   const breadcrumb = useBreadcrumb();
+
+  const rrhhHabilitado = configuracion?.rrhhHabilitado ?? true;
 
   const hasPerm = (p: string) =>
     (user?.permisos || []).includes(p) || user?.rol === "admin";
 
   const items = useMemo(() => {
-    return NAV_ITEMS.filter(({ permission }) => {
+    return NAV_ITEMS.filter(({ permission, modulo, requiereRrhh }) => {
+      if (requiereRrhh && !rrhhHabilitado) return false;
+      if (modulo && !empresaActiva?.modulosHabilitados?.includes(modulo)) return false;
       if (!permission) return true;
       const list = Array.isArray(permission) ? permission : [permission];
       return list.some(hasPerm);
     });
-  }, [user]);
+  }, [user, empresaActiva, rrhhHabilitado]);
 
   const showRRHH =
-    hasPerm("rrhh:ver") ||
-    user?.rol === "admin_rrhh" ||
-    user?.rol === "rrhh";
+    rrhhHabilitado &&
+    (hasPerm("rrhh:ver") ||
+      user?.rol === "admin_rrhh" ||
+      user?.rol === "rrhh");
 
   const initials = user?.nombre?.charAt(0).toUpperCase() ?? "U";
 

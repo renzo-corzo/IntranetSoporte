@@ -1,12 +1,13 @@
 import { Router } from "express";
 import * as relevamientoCtrl from "../controllers/relevamiento.controller";
 import { verifyToken } from "../middlewares/auth.middleware";
-import { requireEmpresa } from "../middlewares/empresa.middleware";
+import { requireEmpresa, requireModulo } from "../middlewares/empresa.middleware";
 
 const router = Router();
 
 router.use(verifyToken);
 router.use(requireEmpresa);
+router.use(requireModulo("relevamientos"));
 
 router.get("/", relevamientoCtrl.getRelevamientos);
 router.get("/:id", relevamientoCtrl.getRelevamientoById);

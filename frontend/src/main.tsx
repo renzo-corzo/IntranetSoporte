@@ -4,12 +4,15 @@ import './index.css'
 import App from './App.tsx'
 import { AuthProvider } from './context/AuthContext'
 import { EmpresaProvider } from './context/EmpresaContext'
+import { ConfiguracionProvider } from './context/ConfiguracionContext'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <AuthProvider>
       <EmpresaProvider>
-        <App />
+        <ConfiguracionProvider>
+          <App />
+        </ConfiguracionProvider>
       </EmpresaProvider>
     </AuthProvider>
   </StrictMode>,

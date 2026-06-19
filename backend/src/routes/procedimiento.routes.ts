@@ -7,12 +7,13 @@ import {
   deleteProcedimiento
 } from "../controllers/procedimiento.controller";
 import { verifyToken } from "../middlewares/auth.middleware";
-import { requireEmpresa } from "../middlewares/empresa.middleware";
+import { requireEmpresa, requireModulo } from "../middlewares/empresa.middleware";
 
 const router = Router();
 
 router.use(verifyToken);
 router.use(requireEmpresa);
+router.use(requireModulo("procedimientos"));
 
 router.get("/", getProcedimientos);
 router.get("/:id", getProcedimientoById);

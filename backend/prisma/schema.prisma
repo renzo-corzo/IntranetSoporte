@@ -7,6 +7,13 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// Configuración global de la instalación (no es por cliente). Una sola fila (id=1).
+model ConfiguracionSistema {
+  id             Int      @id @default(1)
+  rrhhHabilitado Boolean  @default(true)
+  updatedAt      DateTime @updatedAt
+}
+
 model Rol {
   id          Int       @id @default(autoincrement())
   nombre      String    @unique
@@ -47,12 +54,15 @@ model Usuario {
 // (CMDB, Stock, Tareas, Relevamientos, Procedimientos, KB) se etiquetan por Empresa.
 // RRHH y Usuario/Rol quedan globales: son del personal propio de la empresa de IT.
 model Empresa {
-  id          String   @id @default(cuid())
-  nombre      String   @unique
-  descripcion String?
-  activo      Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id                 String   @id @default(cuid())
+  nombre             String   @unique
+  descripcion        String?
+  activo             Boolean  @default(true)
+  // Módulos multi-cliente visibles/habilitados para este cliente.
+  // Claves válidas: cmdb, stock, tareas, relevamientos, procedimientos, kb
+  modulosHabilitados String[] @default(["cmdb", "stock", "tareas", "relevamientos", "procedimientos", "kb"])
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
 
   relevamientos     Relevamiento[]
   procedimientos    Procedimiento[]

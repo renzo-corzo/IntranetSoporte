@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { PlusIcon, PencilIcon, XMarkIcon, BuildingOfficeIcon } from "@heroicons/react/24/outline";
 import { useAuth } from "../context/AuthContext";
 import { useEmpresa } from "../context/EmpresaContext";
-import { getEmpresas, crearEmpresa, actualizarEmpresa, type Empresa } from "../services/empresa.service";
+import { getEmpresas, crearEmpresa, actualizarEmpresa, MODULOS_DISPONIBLES, type Empresa } from "../services/empresa.service";
 
 const EmpresaForm: React.FC<{
   empresa: Empresa | null;
@@ -13,8 +13,15 @@ const EmpresaForm: React.FC<{
   const [nombre, setNombre] = useState(empresa?.nombre || "");
   const [descripcion, setDescripcion] = useState(empresa?.descripcion || "");
   const [activo, setActivo] = useState(empresa?.activo ?? true);
+  const [modulos, setModulos] = useState<string[]>(
+    empresa?.modulosHabilitados ?? MODULOS_DISPONIBLES.map((m) => m.key)
+  );
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  const toggleModulo = (key: string) => {
+    setModulos((prev) => (prev.includes(key) ? prev.filter((m) => m !== key) : [...prev, key]));
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -23,9 +30,9 @@ const EmpresaForm: React.FC<{
     setError("");
     try {
       if (empresa) {
-        await actualizarEmpresa(token, empresa.id, { nombre, descripcion, activo });
+        await actualizarEmpresa(token, empresa.id, { nombre, descripcion, activo, modulosHabilitados: modulos });
       } else {
-        await crearEmpresa(token, { nombre, descripcion });
+        await crearEmpresa(token, { nombre, descripcion, modulosHabilitados: modulos });
       }
       onSuccess();
     } catch (err: any) {
@@ -66,6 +73,21 @@ const EmpresaForm: React.FC<{
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
               rows={3}
             />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Módulos habilitados</label>
+            <div className="grid grid-cols-2 gap-2">
+              {MODULOS_DISPONIBLES.map((m) => (
+                <label key={m.key} className="flex items-center gap-2 text-sm text-gray-700">
+                  <input
+                    type="checkbox"
+                    checked={modulos.includes(m.key)}
+                    onChange={() => toggleModulo(m.key)}
+                  />
+                  {m.label}
+                </label>
+              ))}
+            </div>
           </div>
           {empresa && (
             <label className="flex items-center gap-2 text-sm text-gray-700">
@@ -144,6 +166,7 @@ const Empresas: React.FC = () => {
             <tr>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Nombre</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Descripción</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Módulos</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Estado</th>
               <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Acciones</th>
             </tr>
@@ -151,7 +174,7 @@ const Empresas: React.FC = () => {
           <tbody className="bg-white divide-y divide-gray-200">
             {todasEmpresas.length === 0 ? (
               <tr>
-                <td colSpan={4} className="px-6 py-8 text-center text-gray-500">
+                <td colSpan={5} className="px-6 py-8 text-center text-gray-500">
                   <BuildingOfficeIcon className="h-12 w-12 mx-auto mb-2 text-gray-300" />
                   <p>Todavía no hay clientes configurados</p>
                 </td>
@@ -161,6 +184,9 @@ const Empresas: React.FC = () => {
                 <tr key={empresa.id} className="hover:bg-gray-50">
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{empresa.nombre}</td>
                   <td className="px-6 py-4 text-sm text-gray-600">{empresa.descripcion || "-"}</td>
+                  <td className="px-6 py-4 text-sm text-gray-600">
+                    {empresa.modulosHabilitados?.length ?? 0}/{MODULOS_DISPONIBLES.length}
+                  </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span className={`px-2 py-1 text-xs font-semibold rounded-full ${empresa.activo ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-600"}`}>
                       {empresa.activo ? "Activo" : "Inactivo"}

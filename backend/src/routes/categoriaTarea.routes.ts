@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { verifyToken, requireRole } from "../middlewares/auth.middleware";
-import { requireEmpresa } from "../middlewares/empresa.middleware";
+import { requireEmpresa, requireModulo } from "../middlewares/empresa.middleware";
 import {
   getCategoriasTarea,
   getCategoriaTareaById,
@@ -14,6 +14,7 @@ const router = Router();
 // Todas las rutas requieren autenticación
 router.use(verifyToken);
 router.use(requireEmpresa);
+router.use(requireModulo("tareas"));
 
 // Obtener todas las categorías (todos los roles)
 router.get("/", getCategoriasTarea);

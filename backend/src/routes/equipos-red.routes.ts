@@ -7,12 +7,13 @@ import {
   eliminarEquipoRed
 } from '../controllers/equipos-red.controller';
 import { verifyToken, requirePermission } from '../middlewares/auth.middleware';
-import { requireEmpresa } from '../middlewares/empresa.middleware';
+import { requireEmpresa, requireModulo } from '../middlewares/empresa.middleware';
 
 const router = Router();
 
 router.use(verifyToken);
 router.use(requireEmpresa);
+router.use(requireModulo('cmdb'));
 
 // 📌 Rutas: /api/equipos-red
 router.get('/', requirePermission(['cmdb:read', 'cmdb:manage']), obtenerEquiposRed);
