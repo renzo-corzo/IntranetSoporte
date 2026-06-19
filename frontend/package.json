@@ -1,9 +1,9 @@
 {
-  "name": "infra-caja-frontend",
+  "name": "infinity-cloud-frontend",
   "private": true,
   "version": "1.0.0",
   "type": "module",
-  "description": "Frontend para Sistema de Infraestructura Caja de Abogados",
+  "description": "Frontend de Infinity Cloud - Intranet de Soporte",
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",

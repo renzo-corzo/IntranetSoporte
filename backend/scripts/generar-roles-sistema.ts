@@ -134,7 +134,7 @@ const rolesSistema = [
 const usuariosPorDefecto = [
   {
     username: 'admin',
-    email: 'admin@cajadeabogados.com',
+    email: 'admin@infinitycloud.com',
     password: 'admin123',
     rol: 'admin',
     nombre: 'Administrador Sistema',
@@ -142,7 +142,7 @@ const usuariosPorDefecto = [
   },
   {
     username: 'rrhh',
-    email: 'analista.rrhh@cajadeabogados.com',
+    email: 'analista.rrhh@infinitycloud.com',
     password: 'rrhh123',
     rol: 'rrhh',
     nombre: 'Analista RRHH',
@@ -150,7 +150,7 @@ const usuariosPorDefecto = [
   },
   {
     username: 'admin_rrhh',
-    email: 'rrhh@cajadeabogados.com',
+    email: 'rrhh@infinitycloud.com',
     password: 'rrhh123',
     rol: 'admin_rrhh',
     nombre: 'Admin RRHH',
@@ -158,7 +158,7 @@ const usuariosPorDefecto = [
   },
   {
     username: 'admin_sistemas',
-    email: 'sistemas@cajadeabogados.com',
+    email: 'sistemas@infinitycloud.com',
     password: 'sistemas123',
     rol: 'admin_sistemas',
     nombre: 'Admin Sistemas',
@@ -166,7 +166,7 @@ const usuariosPorDefecto = [
   },
   {
     username: 'stock',
-    email: 'stock@cajadeabogados.com',
+    email: 'stock@infinitycloud.com',
     password: 'stock123',
     rol: 'stock_viewer',
     nombre: 'Usuario Stock Consulta',
@@ -174,7 +174,7 @@ const usuariosPorDefecto = [
   },
   {
     username: 'stock_editor',
-    email: 'stock.editor@cajadeabogados.com',
+    email: 'stock.editor@infinitycloud.com',
     password: 'stock123',
     rol: 'stock_editor',
     nombre: 'Usuario Stock Gestión',
@@ -182,7 +182,7 @@ const usuariosPorDefecto = [
   },
   {
     username: 'supervisor',
-    email: 'supervisor@cajadeabogados.com',
+    email: 'supervisor@infinitycloud.com',
     password: 'supervisor123',
     rol: 'supervisor',
     nombre: 'Supervisor General',
@@ -190,7 +190,7 @@ const usuariosPorDefecto = [
   },
   {
     username: 'auditor',
-    email: 'auditor@cajadeabogados.com',
+    email: 'auditor@infinitycloud.com',
     password: 'auditor123',
     rol: 'auditor',
     nombre: 'Auditor Sistema',

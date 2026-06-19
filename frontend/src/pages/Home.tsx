@@ -54,7 +54,7 @@ const Home: React.FC = () => {
           ¡Bienvenido, {user?.nombre}!
         </h1>
         <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-          Panel de control de Infraestructura - Caja de Abogados
+          Panel de control de Infinity Cloud
         </p>
         <p className="text-gray-500 mt-2">
           Accede a todas las herramientas y recursos del departamento de sistemas

@@ -1,4 +1,0 @@
-ID,Nombre,Apellido,Nombre Completo,DNI,Email,Departamento,Estado,Fecha Ingreso,Días Disponibles,Vacaciones,Licencias,Documentos
-1,"Juan","Pérez","Juan Pérez".trim(),"12345678","juan@caja.com.ar","Sistemas","ACTIVO","2020-01-15T00:00:00.000Z",20,"0","0","0"
-2,"María","González","María González".trim(),"87654321","maria@caja.com.ar","RRHH","ACTIVO","2019-03-20T00:00:00.000Z",15,"0","0","0"
-3,"Carlos","López","Carlos López".trim(),"11223344","carlos@caja.com.ar","Contaduría","ACTIVO","2021-07-01T00:00:00.000Z",25,"0","0","0"

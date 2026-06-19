@@ -4,6 +4,7 @@ import { useAuth } from "../context/AuthContext";
 import { useEmpresa } from "../context/EmpresaContext";
 import { useConfiguracion } from "../context/ConfiguracionContext";
 import EmpresaSwitcher from "../components/EmpresaSwitcher";
+import logoBlanco from "../assets/logo-alt1.png";
 import {
   HomeIcon,
   ClipboardDocumentListIcon,
@@ -111,15 +112,14 @@ const Dashboard: React.FC = () => {
             isCollapsed ? "justify-center px-2" : "px-5"
           }`}
         >
-          <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center flex-shrink-0 shadow-md">
-            <span className="text-white font-bold text-xs">IC</span>
-          </div>
-          {!isCollapsed && (
-            <div className="ml-3 min-w-0">
-              <p className="text-white font-semibold text-sm leading-tight truncate">
-                Infraestructura
-              </p>
-              <p className="text-slate-400 text-xs truncate">Caja de Abogados</p>
+          {isCollapsed ? (
+            <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center flex-shrink-0 shadow-md">
+              <span className="text-white font-bold text-xs">IC</span>
+            </div>
+          ) : (
+            <div className="min-w-0">
+              <img src={logoBlanco} alt="Infinity Cloud" className="h-6 w-auto" />
+              <p className="text-slate-400 text-xs truncate mt-1">Intranet de Soporte</p>
             </div>
           )}
         </div>

@@ -1,7 +1,7 @@
 {
-  "name": "infra-caja-backend",
+  "name": "infinity-cloud-backend",
   "version": "1.0.0",
-  "description": "Backend para Sistema de Infraestructura Caja de Abogados",
+  "description": "Backend de Infinity Cloud - Intranet de Soporte",
   "main": "dist/index.js",
   "scripts": {
     "dev": "tsx src/index.ts",
@@ -25,7 +25,7 @@
     "prisma",
     "postgresql"
   ],
-  "author": "Caja de Abogados",
+  "author": "Infinity Cloud",
   "license": "MIT",
   "dependencies": {
     "@prisma/client": "^5.22.0",

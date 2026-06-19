@@ -108,7 +108,7 @@ const Tareas: React.FC = () => {
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-xl font-bold text-slate-800">Mesa operativa IT</h1>
-          <p className="text-xs text-slate-500 mt-0.5">Infraestructura · Caja de Abogados</p>
+          <p className="text-xs text-slate-500 mt-0.5">Infinity Cloud · Intranet de Soporte</p>
         </div>
 
         <div className="flex gap-2 items-center flex-wrap">

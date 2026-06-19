@@ -8,8 +8,10 @@ import {
   CubeIcon,
   ArrowRightIcon,
 } from "@heroicons/react/24/outline";
+import logoBlanco from "../assets/logo-alt1.png";
+import logoColor from "../assets/logo.png";
 
-const API_URL = `${import.meta.env.VITE_API_URL || "http://localhost:4001/api"}/auth/login`;
+const API_URL = `${import.meta.env.VITE_API_URL || "http://localhost:4002/api"}/auth/login`;
 
 const FEATURES = [
   { icon: ServerIcon,        text: "Gestión CMDB y servidores" },
@@ -72,13 +74,8 @@ export default function Login() {
         <div className="relative z-10 w-full max-w-xs">
           {/* Logo */}
           <div className="mb-10">
-            <div className="w-14 h-14 bg-blue-600 rounded-2xl flex items-center justify-center shadow-2xl mb-6">
-              <span className="text-white font-bold text-xl">IC</span>
-            </div>
-            <h1 className="text-2xl font-bold text-white leading-tight">
-              Sistema de Infraestructura
-            </h1>
-            <p className="text-slate-400 mt-1">Caja de Abogados</p>
+            <img src={logoBlanco} alt="Infinity Cloud" className="h-10 w-auto mb-6" />
+            <p className="text-slate-400 mt-1">Intranet de Soporte</p>
           </div>
 
           {/* Feature list */}
@@ -100,15 +97,8 @@ export default function Login() {
         <div className="w-full max-w-sm">
           {/* Logo mobile */}
           <div className="lg:hidden flex items-center gap-3 mb-10">
-            <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center">
-              <span className="text-white font-bold text-sm">IC</span>
-            </div>
-            <div>
-              <p className="text-slate-800 font-semibold text-sm leading-tight">
-                Infraestructura
-              </p>
-              <p className="text-slate-400 text-xs">Caja de Abogados</p>
-            </div>
+            <img src={logoColor} alt="Infinity Cloud" className="h-8 w-auto" />
+            <p className="text-slate-400 text-xs">Intranet de Soporte</p>
           </div>
 
           <h2 className="text-2xl font-bold text-slate-800 mb-1">
@@ -195,7 +185,7 @@ export default function Login() {
           </form>
 
           <p className="mt-10 text-center text-xs text-slate-400">
-            © {new Date().getFullYear()} Caja de Abogados &mdash; Infraestructura IT
+            © {new Date().getFullYear()} Infinity Cloud &mdash; Intranet de Soporte
           </p>
         </div>
       </div>

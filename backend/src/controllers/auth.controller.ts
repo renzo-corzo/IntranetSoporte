@@ -14,7 +14,7 @@ const DEV_ADMIN_USER = {
   id: 0,
   username: 'admin',
   password: 'admin123', // SOLO para entorno de desarrollo
-  email: 'admin@caja-abogados.com.ar',
+  email: 'admin@infinitycloud.com',
   nombre: 'Administrador',
   rolId: 1,
   rolNombre: 'admin'

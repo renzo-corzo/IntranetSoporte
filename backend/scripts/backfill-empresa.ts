@@ -2,7 +2,7 @@ import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
-const NOMBRE_EMPRESA_DEFAULT = process.argv[2] || 'Caja de Abogados';
+const NOMBRE_EMPRESA_DEFAULT = process.argv[2] || 'Cliente Default';
 
 async function main() {
   const empresa = await prisma.empresa.upsert({
