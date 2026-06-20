@@ -42,8 +42,9 @@ app.use(cors());
 app.use(express.json());
 app.use(morgan('combined'));
 
-// Servir archivos estáticos desde la carpeta uploads
-app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+// Servir archivos estáticos desde la carpeta uploads (configurable vía UPLOAD_DIR, ej. disco persistente en Render)
+const UPLOAD_DIR = process.env.UPLOAD_DIR || path.join(__dirname, '../uploads');
+app.use('/uploads', express.static(UPLOAD_DIR));
 
 // Health check
 app.get('/health', (req, res) => {
