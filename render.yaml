@@ -7,7 +7,7 @@ databases:
 services:
   - type: web
     name: infinitycloud-backend
-    runtime: node
+    env: node
     rootDir: backend
     plan: starter
     buildCommand: npm install && npx prisma generate && npm run build && npx prisma db push --accept-data-loss
@@ -32,8 +32,9 @@ services:
       - key: UPLOAD_DIR
         value: /data/uploads
 
-  - type: static
+  - type: web
     name: infinitycloud-frontend
+    env: static
     rootDir: frontend
     buildCommand: npm install && npm run build
     staticPublishPath: dist
