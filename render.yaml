@@ -32,9 +32,8 @@ services:
       - key: UPLOAD_DIR
         value: /data/uploads
 
-  - type: web
+  - type: static
     name: infinitycloud-frontend
-    runtime: static
     rootDir: frontend
     buildCommand: npm install && npm run build
     staticPublishPath: dist
