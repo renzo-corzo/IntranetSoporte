@@ -601,6 +601,9 @@ enum TipoEquipoCredencial {
   EQUIPO_RED
   EQUIPO_USUARIO
   SERVICIO
+  EMAIL
+  ACCESO_REMOTO
+  OTRO
 }
 
 // Servidores físicos
@@ -779,7 +782,8 @@ model Servicio {
   @@index([empresaId])
 }
 
-// Credenciales cifradas asociadas a equipos o servicios del CMDB
+// Credenciales cifradas. Pueden asociarse a un equipo/servicio del CMDB, o ser
+// standalone (EMAIL, ACCESO_REMOTO, OTRO) para accesos que no pertenecen a ningún equipo.
 model Credencial {
   id              String   @id @default(cuid())
   nombre          String // Etiqueta: "Admin local", "Usuario SA", "WiFi Visitas"
@@ -787,6 +791,7 @@ model Credencial {
   passwordCifrada String // Ciphertext base64 (AES-256-GCM)
   iv              String // Base64
   authTag         String // Base64
+  url             String? // Webmail, portal de acceso remoto, etc. (solo accesos standalone)
   notas           String?
 
   tipoEquipo       TipoEquipoCredencial

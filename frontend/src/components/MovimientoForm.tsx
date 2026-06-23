@@ -119,11 +119,22 @@ const MovimientoForm: React.FC<MovimientoFormProps> = ({
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
+
+    // Al elegir "Ajuste", precargar la cantidad con el stock actual: el campo
+    // pasa a representar el conteo real, no una cantidad a sumar/restar.
+    if (name === 'tipoMovimientoId' && producto) {
+      const tipo = tiposMovimiento.find(t => t.id === parseInt(value));
+      if (tipo?.afectaStock === 'ajuste') {
+        setFormData(prev => ({ ...prev, tipoMovimientoId: value, cantidad: producto.stockActual }));
+        return;
+      }
+    }
+
     setFormData(prev => ({
       ...prev,
       [name]: value
     }));
-    
+
     // Limpiar error del campo
     if (errors[name]) {
       setErrors(prev => ({
@@ -136,13 +147,17 @@ const MovimientoForm: React.FC<MovimientoFormProps> = ({
   const validarFormulario = () => {
     const newErrors: Record<string, string> = {};
 
+    // Validaciones específicas según el tipo de movimiento
+    const tipoSeleccionado = tiposMovimiento.find(t => t.id === parseInt(formData.tipoMovimientoId));
+    const esAjuste = tipoSeleccionado?.afectaStock === 'ajuste';
+
     if (!formData.tipoMovimientoId) newErrors.tipoMovimientoId = 'El tipo de movimiento es obligatorio';
-    if (!formData.cantidad || formData.cantidad <= 0) newErrors.cantidad = 'La cantidad debe ser mayor a 0';
+    if (formData.cantidad === '' || formData.cantidad === null || (esAjuste ? formData.cantidad < 0 : formData.cantidad <= 0)) {
+      newErrors.cantidad = esAjuste ? 'El stock real no puede ser negativo' : 'La cantidad debe ser mayor a 0';
+    }
     if (!formData.motivo.trim()) newErrors.motivo = 'El motivo es obligatorio';
     if (!producto && !formData.productoId) newErrors.productoId = 'El producto es obligatorio';
 
-    // Validaciones específicas según el tipo de movimiento
-    const tipoSeleccionado = tiposMovimiento.find(t => t.id === parseInt(formData.tipoMovimientoId));
     if (tipoSeleccionado) {
       if (tipoSeleccionado.requiereOrigen && !formData.origenId) {
         newErrors.origenId = 'La ubicación de origen es obligatoria para este tipo de movimiento';
@@ -279,18 +294,23 @@ const MovimientoForm: React.FC<MovimientoFormProps> = ({
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Cantidad *
+                {tipoSeleccionado?.afectaStock === 'ajuste' ? 'Stock real (conteo físico) *' : 'Cantidad *'}
               </label>
               <input
                 type="number"
                 name="cantidad"
                 value={formData.cantidad}
                 onChange={handleChange}
-                min="1"
+                min={tipoSeleccionado?.afectaStock === 'ajuste' ? '0' : '1'}
                 className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
                   errors.cantidad ? 'border-red-300' : 'border-gray-300'
                 }`}
               />
+              {tipoSeleccionado?.afectaStock === 'ajuste' && !errors.cantidad && (
+                <p className="mt-1 text-xs text-gray-500">
+                  Ingresá la cantidad real encontrada en el conteo. El sistema reemplaza el stock actual por este valor.
+                </p>
+              )}
               {errors.cantidad && (
                 <p className="mt-1 text-sm text-red-600">{errors.cantidad}</p>
               )}

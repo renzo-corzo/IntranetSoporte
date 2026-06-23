@@ -582,6 +582,12 @@ export const crearMovimiento = async (req: Request, res: Response) => {
       if (nuevoStock < 0) {
         return res.status(400).json({ error: 'Stock insuficiente' });
       }
+    } else if (tipoMovimiento.afectaStock === 'ajuste') {
+      // Para "Ajuste" la cantidad es el stock real (conteo físico), no un delta
+      nuevoStock = cantidad;
+      if (nuevoStock < 0) {
+        return res.status(400).json({ error: 'El stock no puede ser negativo' });
+      }
     }
 
     // Crear movimiento y actualizar stock en transacción

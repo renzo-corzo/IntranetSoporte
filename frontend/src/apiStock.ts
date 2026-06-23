@@ -105,7 +105,7 @@ export interface TipoMovimiento {
   id: number;
   nombre: string;
   descripcion?: string;
-  afectaStock: 'suma' | 'resta' | 'neutro';
+  afectaStock: 'suma' | 'resta' | 'neutro' | 'ajuste';
   requiereOrigen: boolean;
   requiereDestino: boolean;
   color?: string;

@@ -3,8 +3,9 @@ import prisma from "../lib/prisma";
 import { encrypt, decrypt } from "../utils/crypto";
 import { TipoEquipoCredencial } from "@prisma/client";
 
-// Mapea el discriminador de tipo al nombre del campo FK correspondiente
-const FK_FIELD: Record<TipoEquipoCredencial, string> = {
+// Mapea el discriminador de tipo al nombre del campo FK correspondiente.
+// EMAIL, ACCESO_REMOTO y OTRO no tienen equipo asociado (quedan standalone).
+const FK_FIELD: Partial<Record<TipoEquipoCredencial, string>> = {
   SERVIDOR_FISICO: "servidorFisicoId",
   MAQUINA_VIRTUAL: "maquinaVirtualId",
   EQUIPO_RED: "equipoRedId",
@@ -12,10 +13,13 @@ const FK_FIELD: Record<TipoEquipoCredencial, string> = {
   SERVICIO: "servicioId",
 };
 
+const TIPOS_STANDALONE: TipoEquipoCredencial[] = ["EMAIL", "ACCESO_REMOTO", "OTRO"];
+
 const SELECT_SEGURO = {
   id: true,
   nombre: true,
   usuario: true,
+  url: true,
   notas: true,
   tipoEquipo: true,
   creadoEn: true,
@@ -23,23 +27,38 @@ const SELECT_SEGURO = {
   creadoPor: { select: { id: true, nombre: true } },
 };
 
-// Listar credenciales (metadata segura, nunca passwordCifrada/iv/authTag)
+// Listar credenciales (metadata segura, nunca passwordCifrada/iv/authTag).
+// Por equipo puntual del CMDB (tipoEquipo+equipoId), o la bóveda standalone
+// de accesos sueltos (sin equipoId) cuando tipoEquipo se omite o es uno de
+// los tipos sin equipo asociado.
 export const obtenerCredenciales = async (req: Request, res: Response) => {
   try {
-    const { tipoEquipo, equipoId } = req.query;
+    const { tipoEquipo, equipoId, buscar } = req.query;
     const empresaId = (req as any).empresaId;
 
-    if (!tipoEquipo || !equipoId) {
-      return res.status(400).json({ error: "tipoEquipo y equipoId son obligatorios" });
+    const where: any = { empresaId };
+
+    if (tipoEquipo && equipoId) {
+      const fkField = FK_FIELD[tipoEquipo as TipoEquipoCredencial];
+      if (!fkField) {
+        return res.status(400).json({ error: "tipoEquipo inválido" });
+      }
+      where[fkField] = equipoId as string;
+    } else if (tipoEquipo) {
+      where.tipoEquipo = tipoEquipo as TipoEquipoCredencial;
+    } else {
+      where.tipoEquipo = { in: TIPOS_STANDALONE };
     }
 
-    const fkField = FK_FIELD[tipoEquipo as TipoEquipoCredencial];
-    if (!fkField) {
-      return res.status(400).json({ error: "tipoEquipo inválido" });
+    if (buscar) {
+      where.OR = [
+        { nombre: { contains: buscar as string, mode: "insensitive" } },
+        { usuario: { contains: buscar as string, mode: "insensitive" } },
+      ];
     }
 
     const credenciales = await prisma.credencial.findMany({
-      where: { empresaId, tipoEquipo: tipoEquipo as TipoEquipoCredencial, [fkField]: equipoId as string },
+      where,
       select: SELECT_SEGURO,
       orderBy: { creadoEn: "desc" },
     });
@@ -54,17 +73,17 @@ export const obtenerCredenciales = async (req: Request, res: Response) => {
 // Crear credencial (cifra el password antes de guardar)
 export const crearCredencial = async (req: Request, res: Response) => {
   try {
-    const { nombre, usuario, password, notas, tipoEquipo, equipoId } = req.body;
+    const { nombre, usuario, password, url, notas, tipoEquipo, equipoId } = req.body;
     const creadoPorId = (req as any).user.id;
     const empresaId = (req as any).empresaId;
 
-    if (!nombre || !password || !tipoEquipo || !equipoId) {
-      return res.status(400).json({ error: "nombre, password, tipoEquipo y equipoId son obligatorios" });
+    if (!nombre || !password || !tipoEquipo) {
+      return res.status(400).json({ error: "nombre, password y tipoEquipo son obligatorios" });
     }
 
     const fkField = FK_FIELD[tipoEquipo as TipoEquipoCredencial];
-    if (!fkField) {
-      return res.status(400).json({ error: "tipoEquipo inválido" });
+    if (fkField && !equipoId) {
+      return res.status(400).json({ error: `Para el tipo ${tipoEquipo} se requiere equipoId` });
     }
 
     const { ciphertext, iv, authTag } = encrypt(password);
@@ -77,10 +96,11 @@ export const crearCredencial = async (req: Request, res: Response) => {
         passwordCifrada: ciphertext,
         iv,
         authTag,
+        url: url || null,
         notas: notas || null,
         tipoEquipo,
         creadoPorId,
-        [fkField]: equipoId,
+        ...(fkField ? { [fkField]: equipoId } : {}),
       },
       select: SELECT_SEGURO,
     });
@@ -96,7 +116,7 @@ export const crearCredencial = async (req: Request, res: Response) => {
 export const actualizarCredencial = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const { nombre, usuario, password, notas } = req.body;
+    const { nombre, usuario, password, url, notas } = req.body;
     const empresaId = (req as any).empresaId;
 
     const existente = await prisma.credencial.findUnique({ where: { id } });
@@ -107,6 +127,7 @@ export const actualizarCredencial = async (req: Request, res: Response) => {
     const data: any = {
       nombre,
       usuario: usuario || null,
+      url: url || null,
       notas: notas || null,
     };
 

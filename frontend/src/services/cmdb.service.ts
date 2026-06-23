@@ -121,12 +121,13 @@ export interface Servicio {
 }
 
 // Credenciales
-export type TipoEquipoCredencial = 'SERVIDOR_FISICO' | 'MAQUINA_VIRTUAL' | 'EQUIPO_RED' | 'EQUIPO_USUARIO' | 'SERVICIO';
+export type TipoEquipoCredencial = 'SERVIDOR_FISICO' | 'MAQUINA_VIRTUAL' | 'EQUIPO_RED' | 'EQUIPO_USUARIO' | 'SERVICIO' | 'EMAIL' | 'ACCESO_REMOTO' | 'OTRO';
 
 export interface Credencial {
   id: string;
   nombre: string;
   usuario?: string;
+  url?: string;
   notas?: string;
   tipoEquipo: TipoEquipoCredencial;
   creadoEn: string;
@@ -363,5 +364,38 @@ export const revelarCredencial = async (id: string, token: string) => {
     headers: { Authorization: `Bearer ${token}` }
   });
   return response.data as { password: string };
+};
+
+// Accesos (bóveda standalone: credenciales sin equipo del CMDB asociado)
+export const getAccesos = async (
+  token: string,
+  params?: { tipoEquipo?: TipoEquipoCredencial; buscar?: string }
+) => {
+  const response = await axios.get(`${API_URL}/credenciales`, {
+    headers: { Authorization: `Bearer ${token}` },
+    params
+  });
+  return response.data as Credencial[];
+};
+
+export const crearAcceso = async (
+  data: { nombre: string; tipoEquipo: TipoEquipoCredencial; usuario?: string; password: string; url?: string; notas?: string },
+  token: string
+) => {
+  const response = await axios.post(`${API_URL}/credenciales`, data, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+  return response.data as Credencial;
+};
+
+export const actualizarAcceso = async (
+  id: string,
+  data: { nombre?: string; usuario?: string; password?: string; url?: string; notas?: string },
+  token: string
+) => {
+  const response = await axios.put(`${API_URL}/credenciales/${id}`, data, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+  return response.data as Credencial;
 };
 
