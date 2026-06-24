@@ -128,6 +128,9 @@ export async function getZabbixHostsFull(url: string, authToken: string, groupId
     auth: authToken,
     id: 2
   }) as ZabbixAxiosResponse;
+  if (response.data.error) {
+    throw new Error(response.data.error.data || response.data.error.message || "Error al consultar host.get en Zabbix");
+  }
   return response.data.result;
 }
 
