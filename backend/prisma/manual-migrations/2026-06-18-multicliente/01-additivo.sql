@@ -5,8 +5,9 @@ BEGIN;
 -- CreateEnum
 CREATE TYPE "TipoEquipoCredencial" AS ENUM ('SERVIDOR_FISICO', 'MAQUINA_VIRTUAL', 'EQUIPO_RED', 'EQUIPO_USUARIO', 'SERVICIO');
 
--- AlterEnum
-ALTER TYPE "TipoServicio" ADD VALUE 'WIFI';
+-- AlterEnum (IF NOT EXISTS: en producción real este valor ya existía de
+-- antes de este chequeo, aparentemente de un intento previo)
+ALTER TYPE "TipoServicio" ADD VALUE IF NOT EXISTS 'WIFI';
 
 -- AlterTable
 ALTER TABLE "Relevamiento" ADD COLUMN     "empresaId" TEXT;
@@ -65,9 +66,10 @@ ALTER TABLE "EquipoRed" ADD COLUMN     "empresaId" TEXT;
 -- AlterTable
 ALTER TABLE "EquipoUsuario" ADD COLUMN     "empresaId" TEXT;
 
--- AlterTable
+-- AlterTable ("ssid" con IF NOT EXISTS: en producción real ya existía de
+-- antes de este chequeo, igual que el valor 'WIFI' del enum de arriba)
 ALTER TABLE "Servicio" ADD COLUMN     "empresaId" TEXT,
-ADD COLUMN     "ssid" TEXT,
+ADD COLUMN IF NOT EXISTS "ssid" TEXT,
 ALTER COLUMN "tipoEquipo" DROP NOT NULL;
 
 -- CreateTable
@@ -82,68 +84,18 @@ CREATE TABLE "Empresa" (
     CONSTRAINT "Empresa_pkey" PRIMARY KEY ("id")
 );
 
--- CreateTable
-CREATE TABLE "Credencial" (
-    "id" TEXT NOT NULL,
-    "nombre" TEXT NOT NULL,
-    "usuario" TEXT,
-    "passwordCifrada" TEXT NOT NULL,
-    "iv" TEXT NOT NULL,
-    "authTag" TEXT NOT NULL,
-    "notas" TEXT,
-    "tipoEquipo" "TipoEquipoCredencial" NOT NULL,
-    "servidorFisicoId" TEXT,
-    "maquinaVirtualId" TEXT,
-    "equipoRedId" TEXT,
-    "equipoUsuarioId" TEXT,
-    "servicioId" TEXT,
-    "empresaId" TEXT,
-    "creadoPorId" INTEGER NOT NULL,
-    "creadoEn" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "actualizadoEn" TIMESTAMP(3) NOT NULL,
-
-    CONSTRAINT "Credencial_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
-CREATE TABLE "CredencialAcceso" (
-    "id" TEXT NOT NULL,
-    "credencialId" TEXT NOT NULL,
-    "usuarioId" INTEGER NOT NULL,
-    "fecha" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
-    CONSTRAINT "CredencialAcceso_pkey" PRIMARY KEY ("id")
-);
+-- NOTA: "Credencial" y "CredencialAcceso" ya existen en producción real (de
+-- un intento previo, con 6 filas de credenciales reales) con una forma
+-- distinta (columna "categoria"/TipoCredencial en vez de "tipoEquipo"/
+-- TipoEquipoCredencial, sin empresaId). Esa reconciliación se hace en
+-- 2026-06-19-reconciliar-credencial/01-migrar.sql, no acá: no hay CREATE
+-- TABLE para ninguna de las dos en este paso.
 
 -- CreateIndex
 CREATE UNIQUE INDEX "Empresa_nombre_key" ON "Empresa"("nombre");
 
 -- CreateIndex
 CREATE INDEX "Empresa_nombre_idx" ON "Empresa"("nombre");
-
--- CreateIndex
-CREATE INDEX "Credencial_tipoEquipo_idx" ON "Credencial"("tipoEquipo");
-
--- CreateIndex
-CREATE INDEX "Credencial_servidorFisicoId_idx" ON "Credencial"("servidorFisicoId");
-
--- CreateIndex
-CREATE INDEX "Credencial_maquinaVirtualId_idx" ON "Credencial"("maquinaVirtualId");
-
--- CreateIndex
-CREATE INDEX "Credencial_equipoRedId_idx" ON "Credencial"("equipoRedId");
-
--- CreateIndex
-CREATE INDEX "Credencial_equipoUsuarioId_idx" ON "Credencial"("equipoUsuarioId");
-
--- CreateIndex
-CREATE INDEX "Credencial_servicioId_idx" ON "Credencial"("servicioId");
-
--- CreateIndex
-CREATE INDEX "Credencial_empresaId_idx" ON "Credencial"("empresaId");
-
--- CreateIndex
-CREATE INDEX "CredencialAcceso_credencialId_idx" ON "CredencialAcceso"("credencialId");
 
 -- CreateIndex
 CREATE INDEX "Relevamiento_empresaId_idx" ON "Relevamiento"("empresaId");
@@ -264,33 +216,6 @@ ALTER TABLE "EquipoUsuario" ADD CONSTRAINT "EquipoUsuario_empresaId_fkey" FOREIG
 
 -- AddForeignKey
 ALTER TABLE "Servicio" ADD CONSTRAINT "Servicio_empresaId_fkey" FOREIGN KEY ("empresaId") REFERENCES "Empresa"("id") ON DELETE SET NULL ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "Credencial" ADD CONSTRAINT "Credencial_creadoPorId_fkey" FOREIGN KEY ("creadoPorId") REFERENCES "Usuario"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "Credencial" ADD CONSTRAINT "Credencial_servidorFisicoId_fkey" FOREIGN KEY ("servidorFisicoId") REFERENCES "ServidorFisico"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "Credencial" ADD CONSTRAINT "Credencial_maquinaVirtualId_fkey" FOREIGN KEY ("maquinaVirtualId") REFERENCES "MaquinaVirtual"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "Credencial" ADD CONSTRAINT "Credencial_equipoRedId_fkey" FOREIGN KEY ("equipoRedId") REFERENCES "EquipoRed"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "Credencial" ADD CONSTRAINT "Credencial_equipoUsuarioId_fkey" FOREIGN KEY ("equipoUsuarioId") REFERENCES "EquipoUsuario"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "Credencial" ADD CONSTRAINT "Credencial_servicioId_fkey" FOREIGN KEY ("servicioId") REFERENCES "Servicio"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "Credencial" ADD CONSTRAINT "Credencial_empresaId_fkey" FOREIGN KEY ("empresaId") REFERENCES "Empresa"("id") ON DELETE SET NULL ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "CredencialAcceso" ADD CONSTRAINT "CredencialAcceso_credencialId_fkey" FOREIGN KEY ("credencialId") REFERENCES "Credencial"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "CredencialAcceso" ADD CONSTRAINT "CredencialAcceso_usuarioId_fkey" FOREIGN KEY ("usuarioId") REFERENCES "Usuario"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 
 COMMIT;
