@@ -52,6 +52,7 @@ const RelevamientoTable: React.FC = () => {
   const [zabbixHosts, setZabbixHosts] = useState<any[]>([]);
   const [loadingZabbix, setLoadingZabbix] = useState(false);
   const [errorZabbix, setErrorZabbix] = useState<string | null>(null);
+  const [zabbixNoConfigurado, setZabbixNoConfigurado] = useState(false);
   
   // Estado para vista detallada
   const [selectedHost, setSelectedHost] = useState<HostDetail | null>(null);
@@ -289,25 +290,27 @@ const RelevamientoTable: React.FC = () => {
 
   // Cargar hosts de Zabbix
   useEffect(() => {
+    if (!token) return;
     setLoadingZabbix(true);
     setErrorZabbix(null);
-    console.log("Cargando datos de Zabbix...");
-    console.log("URL de la API:", `${API_URL}/zabbix/hosts`);
-    
-    axios.get(`${API_URL}/zabbix/hosts`)
+    setZabbixNoConfigurado(false);
+
+    axios.get(`${API_URL}/zabbix/hosts`, {
+      headers: { Authorization: `Bearer ${token}` }
+    })
       .then(res => {
-        console.log("Datos de Zabbix recibidos:", res.data);
-        console.log("Estructura del primer host:", res.data[0]);
         setZabbixHosts(res.data);
       })
       .catch((err) => {
-        console.error("Error al cargar Zabbix:", err);
-        console.error("URL que falló:", `${API_URL}/zabbix/hosts`);
-        console.error("Respuesta del servidor:", err.response?.data);
-        setErrorZabbix(`Error al cargar inventario de Zabbix: ${err.message}`);
+        if (err.response?.status === 400) {
+          setZabbixNoConfigurado(true);
+        } else {
+          console.error("Error al cargar Zabbix:", err);
+          setErrorZabbix(`Error al cargar inventario de Zabbix: ${err.message}`);
+        }
       })
       .finally(() => setLoadingZabbix(false));
-  }, []);
+  }, [token]);
 
   const getStatusColor = (status: string) => {
     switch (status?.toLowerCase()) {
@@ -471,6 +474,11 @@ const RelevamientoTable: React.FC = () => {
           <div className="p-8 text-center text-gray-500">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
             Cargando inventario de Zabbix...
+          </div>
+        ) : zabbixNoConfigurado ? (
+          <div className="p-8 text-center text-gray-500">
+            <div className="text-lg font-medium mb-2">Zabbix no configurado</div>
+            <div className="text-sm">Este cliente no tiene Zabbix configurado. Pedile a un admin que lo complete en Empresas.</div>
           </div>
         ) : errorZabbix ? (
           <div className="p-8 text-center text-red-500">

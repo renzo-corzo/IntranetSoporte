@@ -1,8 +1,28 @@
 import axios from "axios";
+import prisma from "../lib/prisma";
+import { decrypt } from "../utils/crypto";
 
-const ZABBIX_URL = "http://192.168.123.6/zabbix/api_jsonrpc.php";
-const ZABBIX_USER = "Admin";
-const ZABBIX_PASSWORD = "Hexadecimal16";
+export interface ZabbixConfig {
+  url: string;
+  usuario: string;
+  password: string;
+}
+
+// Resuelve la config de Zabbix del cliente activo (cada empresa tiene su
+// propio servidor). Devuelve null si el cliente no la completó todavía.
+export async function getZabbixConfigForEmpresa(empresaId: string): Promise<ZabbixConfig | null> {
+  const empresa = await prisma.empresa.findUnique({ where: { id: empresaId } });
+
+  if (!empresa?.zabbixUrl || !empresa.zabbixUsuario || !empresa.zabbixPasswordCifrada || !empresa.zabbixIv || !empresa.zabbixAuthTag) {
+    return null;
+  }
+
+  return {
+    url: empresa.zabbixUrl,
+    usuario: empresa.zabbixUsuario,
+    password: decrypt(empresa.zabbixPasswordCifrada, empresa.zabbixIv, empresa.zabbixAuthTag)
+  };
+}
 
 // Interfaces para tipado de respuestas de Zabbix
 interface ZabbixResponse {
@@ -15,22 +35,25 @@ interface ZabbixAxiosResponse {
 }
 
 // 1. Autenticación y obtención de token
-export async function zabbixLogin() {
-  const response = await axios.post(ZABBIX_URL, {
+export async function zabbixLogin(config: ZabbixConfig) {
+  const response = await axios.post(config.url, {
     jsonrpc: "2.0",
     method: "user.login",
     params: {
-      user: ZABBIX_USER,
-      password: ZABBIX_PASSWORD
+      user: config.usuario,
+      password: config.password
     },
     id: 1
   }) as ZabbixAxiosResponse;
+  if (response.data.error) {
+    throw new Error(response.data.error.data || response.data.error.message || "Error de autenticación en Zabbix");
+  }
   return response.data.result; // token
 }
 
 // 2. Obtener hosts (equipos) con inventario, estado, interfaces, etiquetas y grupos
-export async function getZabbixHostsFull(authToken: string) {
-  const response = await axios.post(ZABBIX_URL, {
+export async function getZabbixHostsFull(url: string, authToken: string) {
+  const response = await axios.post(url, {
     jsonrpc: "2.0",
     method: "host.get",
     params: {
@@ -47,10 +70,10 @@ export async function getZabbixHostsFull(authToken: string) {
 }
 
 // 3. Obtener problemas activos por host
-export async function getProblemsByHost(authToken: string, hostid: string) {
+export async function getProblemsByHost(url: string, authToken: string, hostid: string) {
   try {
     // Primero intentamos obtener problemas activos usando triggers
-    const triggerResponse = await axios.post(ZABBIX_URL, {
+    const triggerResponse = await axios.post(url, {
       jsonrpc: "2.0",
       method: "trigger.get",
       params: {
@@ -144,8 +167,8 @@ export async function getProblemsByHost(authToken: string, hostid: string) {
 }
 
 // 4. Obtener gráficos por host
-export async function getGraphsByHost(authToken: string, hostid: string) {
-  const response = await axios.post(ZABBIX_URL, {
+export async function getGraphsByHost(url: string, authToken: string, hostid: string) {
+  const response = await axios.post(url, {
     jsonrpc: "2.0",
     method: "graph.get",
     params: {
@@ -159,8 +182,8 @@ export async function getGraphsByHost(authToken: string, hostid: string) {
 }
 
 // 5. Obtener tableros por host (si aplica)
-export async function getDashboardsByHost(authToken: string, hostid: string) {
-  const response = await axios.post(ZABBIX_URL, {
+export async function getDashboardsByHost(url: string, authToken: string, hostid: string) {
+  const response = await axios.post(url, {
     jsonrpc: "2.0",
     method: "dashboard.get",
     params: {
@@ -174,8 +197,8 @@ export async function getDashboardsByHost(authToken: string, hostid: string) {
 }
 
 // 6. Obtener web monitoring por host (si aplica)
-export async function getWebMonitoringByHost(authToken: string, hostid: string) {
-  const response = await axios.post(ZABBIX_URL, {
+export async function getWebMonitoringByHost(url: string, authToken: string, hostid: string) {
+  const response = await axios.post(url, {
     jsonrpc: "2.0",
     method: "httptest.get",
     params: {

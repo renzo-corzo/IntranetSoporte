@@ -1,13 +1,26 @@
 import { Router } from "express";
-import { zabbixLogin, getZabbixHostsFull, getProblemsByHost, getGraphsByHost, getDashboardsByHost, getWebMonitoringByHost } from "../services/zabbixService";
+import { zabbixLogin, getZabbixHostsFull, getProblemsByHost, getGraphsByHost, getDashboardsByHost, getWebMonitoringByHost, getZabbixConfigForEmpresa } from "../services/zabbixService";
 import axios from "axios";
+import { verifyToken } from "../middlewares/auth.middleware";
+import { requireEmpresa, requireModulo } from "../middlewares/empresa.middleware";
 
 const router = Router();
 
+router.use(verifyToken);
+router.use(requireEmpresa);
+router.use(requireModulo("relevamientos"));
+
 router.get("/hosts", async (req, res) => {
   try {
-    const token = await zabbixLogin();
-    const hosts = await getZabbixHostsFull(token);
+    const empresaId = (req as any).empresaId;
+    const config = await getZabbixConfigForEmpresa(empresaId);
+    if (!config) {
+      return res.status(400).json({ error: "Zabbix no está configurado para este cliente" });
+    }
+    const webBase = config.url.replace(/\/api_jsonrpc\.php$/, "");
+
+    const token = await zabbixLogin(config);
+    const hosts = await getZabbixHostsFull(config.url, token);
     
     const formatUptime = (seconds: number) => {
       if (!seconds || Number.isNaN(seconds)) return null;
@@ -24,7 +37,7 @@ router.get("/hosts", async (req, res) => {
 
     const hostsFull = await Promise.all(
       hosts.map(async (host: any) => {
-        const problems = await getProblemsByHost(token, host.hostid);
+        const problems = await getProblemsByHost(config.url, token, host.hostid);
         console.log(`\n=== HOST: ${host.name} ===`);
         console.log(`Host ID: ${host.hostid}`);
         console.log(`Problemas encontrados: ${problems?.length || 0}`);
@@ -41,14 +54,14 @@ router.get("/hosts", async (req, res) => {
         }
         console.log(`ProblemsCount asignado: ${problems ? problems.length : 0}`);
         console.log(`========================\n`);
-        const graphs = await getGraphsByHost(token, host.hostid);
-        const dashboards = await getDashboardsByHost(token, host.hostid);
-        const webMonitoring = await getWebMonitoringByHost(token, host.hostid);
+        const graphs = await getGraphsByHost(config.url, token, host.hostid);
+        const dashboards = await getDashboardsByHost(config.url, token, host.hostid);
+        const webMonitoring = await getWebMonitoringByHost(config.url, token, host.hostid);
         // Obtener cantidad de ítems (datos recientes)
         let lastDataCount = null;
         try {
           const itemsResp: any = await axios.post(
-            "http://192.168.123.6/zabbix/api_jsonrpc.php",
+            config.url,
             {
               jsonrpc: "2.0",
               method: "item.get",
@@ -70,7 +83,7 @@ router.get("/hosts", async (req, res) => {
         let uptimeLastClock: number | null = null;
         try {
           const uptimeResp: any = await axios.post(
-            "http://192.168.123.6/zabbix/api_jsonrpc.php",
+            config.url,
             {
               jsonrpc: "2.0",
               method: "item.get",
@@ -139,7 +152,7 @@ router.get("/hosts", async (req, res) => {
             // Estrategia 1: Buscar items WMI específicos de evaluación
             try {
               const evalResp: any = await axios.post(
-                "http://192.168.123.6/zabbix/api_jsonrpc.php",
+                config.url,
                 {
                   jsonrpc: "2.0",
                   method: "item.get",
@@ -173,7 +186,7 @@ router.get("/hosts", async (req, res) => {
             if (!windowsEvaluation) {
               try {
                 const evalResp2: any = await axios.post(
-                  "http://192.168.123.6/zabbix/api_jsonrpc.php",
+                  config.url,
                   {
                     jsonrpc: "2.0",
                     method: "item.get",
@@ -221,7 +234,7 @@ router.get("/hosts", async (req, res) => {
             if (!windowsEvaluation) {
               try {
                 const perfResp: any = await axios.post(
-                  "http://192.168.123.6/zabbix/api_jsonrpc.php",
+                  config.url,
                   {
                     jsonrpc: "2.0",
                     method: "item.get",
@@ -268,17 +281,17 @@ router.get("/hosts", async (req, res) => {
           grupos: grupos,
           gruposArray: gruposArray,
           status: estado,
-          lastDataUrl: `http://192.168.123.6/zabbix/zabbix.php?name=&evaltype=0&tags%5B0%5D%5Btag%5D=&tags%5B0%5D%5Boperator%5D=0&tags%5B0%5D%5Bvalue%5D=&show_tags=3&tag_name_format=0&tag_priority=&filter_name=&filter_show_counter=0&filter_custom_time=0&sort=name&sortorder=ASC&show_details=0&action=latest.view&hostids%5B%5D=${host.hostid}`,
+          lastDataUrl: `${webBase}/zabbix.php?name=&evaltype=0&tags%5B0%5D%5Btag%5D=&tags%5B0%5D%5Boperator%5D=0&tags%5B0%5D%5Bvalue%5D=&show_tags=3&tag_name_format=0&tag_priority=&filter_name=&filter_show_counter=0&filter_custom_time=0&sort=name&sortorder=ASC&show_details=0&action=latest.view&hostids%5B%5D=${host.hostid}`,
           lastDataCount,
           problems: problems || [],
           problemsCount: problems ? problems.length : 0,
-          problemsUrl: `http://192.168.123.6/zabbix/zabbix.php?show=1&name=&inventory%5B0%5D%5Bfield%5D=type&inventory%5B0%5D%5Bvalue%5D=&evaltype=0&tags%5B0%5D%5Btag%5D=&tags%5B0%5D%5Boperator%5D=0&tags%5B0%5D%5Bvalue%5D=&show_tags=3&tag_name_format=0&tag_priority=&show_opdata=0&show_timeline=1&filter_name=&filter_show_counter=0&filter_custom_time=0&sort=clock&sortorder=DESC&age_state=0&show_suppressed=0&unacknowledged=0&compact_view=0&details=0&highlight_row=0&action=problem.view&hostids%5B%5D=${host.hostid}`,
-          graphsUrl: graphs && graphs.length > 0 ? `http://192.168.123.6/zabbix/zabbix.php?action=charts.view&filter_hostids%5B%5D=${host.hostid}&filter_set=1` : null,
+          problemsUrl: `${webBase}/zabbix.php?show=1&name=&inventory%5B0%5D%5Bfield%5D=type&inventory%5B0%5D%5Bvalue%5D=&evaltype=0&tags%5B0%5D%5Btag%5D=&tags%5B0%5D%5Boperator%5D=0&tags%5B0%5D%5Bvalue%5D=&show_tags=3&tag_name_format=0&tag_priority=&show_opdata=0&show_timeline=1&filter_name=&filter_show_counter=0&filter_custom_time=0&sort=clock&sortorder=DESC&age_state=0&show_suppressed=0&unacknowledged=0&compact_view=0&details=0&highlight_row=0&action=problem.view&hostids%5B%5D=${host.hostid}`,
+          graphsUrl: graphs && graphs.length > 0 ? `${webBase}/zabbix.php?action=charts.view&filter_hostids%5B%5D=${host.hostid}&filter_set=1` : null,
           graphsCount: graphs ? graphs.length : 0,
-          dashboardsUrl: `http://192.168.123.6/zabbix/zabbix.php?action=host.edit&hostid=${host.hostid}`,
+          dashboardsUrl: `${webBase}/zabbix.php?action=host.edit&hostid=${host.hostid}`,
           dashboardsCount: dashboards ? dashboards.length : 0,
-          hostViewUrl: `http://192.168.123.6/zabbix/zabbix.php?action=host.dashboard.view&hostid=${host.hostid}`,
-          webUrl: webMonitoring && webMonitoring.length > 0 ? `http://192.168.123.6/zabbix/zabbix.php?action=web.view&httptestid=${webMonitoring[0].httptestid}` : null,
+          hostViewUrl: `${webBase}/zabbix.php?action=host.dashboard.view&hostid=${host.hostid}`,
+          webUrl: webMonitoring && webMonitoring.length > 0 ? `${webBase}/zabbix.php?action=web.view&httptestid=${webMonitoring[0].httptestid}` : null,
           uptimeSeconds,
           uptimeFormatted,
           uptimeLastClock,

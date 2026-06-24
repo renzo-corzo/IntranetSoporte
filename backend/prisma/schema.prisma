@@ -61,6 +61,16 @@ model Empresa {
   // Módulos multi-cliente visibles/habilitados para este cliente.
   // Claves válidas: cmdb, stock, tareas, relevamientos, procedimientos, kb
   modulosHabilitados String[] @default(["cmdb", "stock", "tareas", "relevamientos", "procedimientos", "kb"])
+
+  // Integración Zabbix de este cliente (cada cliente tiene su propio servidor).
+  // "Configurado" = los 5 campos no nulos. Password cifrado con el mismo
+  // mecanismo AES-256-GCM que usa Credencial (backend/src/utils/crypto.ts).
+  zabbixUrl             String?
+  zabbixUsuario         String?
+  zabbixPasswordCifrada String?
+  zabbixIv              String?
+  zabbixAuthTag         String?
+
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
 
