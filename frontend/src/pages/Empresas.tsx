@@ -93,11 +93,11 @@ const EmpresaForm: React.FC<{
           <div className="border-t border-gray-200 pt-4">
             <label className="block text-sm font-medium text-gray-700 mb-1">Grupo de hosts en Zabbix</label>
             <p className="text-xs text-gray-500 mb-2">
-              Nombre exacto del Host Group en Zabbix que identifica a este cliente. Las credenciales de Zabbix son únicas para toda la instalación (se configuran en Admin → Configuración).
+              Nombre exacto del Host Group en Zabbix que identifica a este cliente, o su ID numérico (se ve en la URL al editar el grupo en Zabbix, ej: .../hostgroup.edit?groupid=26 → poner 26). Si el nombre no matchea, usar el ID es más confiable. Las credenciales de Zabbix son únicas para toda la instalación (se configuran en Admin → Configuración).
             </p>
             <input
               type="text"
-              placeholder="ej: Cliente ACME"
+              placeholder="ej: Cliente ACME, o el ID numérico (26)"
               value={zabbixGrupo}
               onChange={(e) => setZabbixGrupo(e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"

@@ -64,7 +64,18 @@ export async function resolverContextoZabbix(empresaId: string): Promise<ZabbixC
   }
 
   const token = await zabbixLogin(config);
-  const groupId = await getHostGroupIdByName(config.url, token, empresa.zabbixGrupo);
+
+  // Si se configuró el groupid numérico de Zabbix directamente (visible en la
+  // URL del grupo: .../hostgroup.edit?groupid=26), se usa tal cual y se evita
+  // la búsqueda por nombre, que puede fallar por diferencias invisibles
+  // (espacios, etc.) en el string aunque el nombre se vea idéntico.
+  const grupoConfigurado = empresa.zabbixGrupo.trim();
+  let groupId: string | null;
+  if (/^\d+$/.test(grupoConfigurado)) {
+    groupId = grupoConfigurado;
+  } else {
+    groupId = await getHostGroupIdByName(config.url, token, grupoConfigurado);
+  }
   if (!groupId) {
     return { error: `El grupo "${empresa.zabbixGrupo}" no existe en Zabbix` };
   }
