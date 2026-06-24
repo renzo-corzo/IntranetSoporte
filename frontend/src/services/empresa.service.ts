@@ -18,9 +18,7 @@ export interface Empresa {
   descripcion?: string | null;
   activo: boolean;
   modulosHabilitados: string[];
-  zabbixUrl?: string | null;
-  zabbixUsuario?: string | null;
-  zabbixConfigurado: boolean;
+  zabbixGrupo?: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -30,9 +28,7 @@ interface EmpresaInput {
   descripcion?: string;
   activo?: boolean;
   modulosHabilitados?: string[];
-  zabbixUrl?: string;
-  zabbixUsuario?: string;
-  zabbixPassword?: string;
+  zabbixGrupo?: string;
 }
 
 export const getEmpresas = async (token: string, incluirInactivas = false): Promise<Empresa[]> => {
@@ -59,16 +55,6 @@ export const actualizarEmpresa = async (
   data: EmpresaInput
 ): Promise<Empresa> => {
   const response = await axios.put(`${API_URL}/empresas/${id}`, data, {
-    headers: { Authorization: `Bearer ${token}` }
-  });
-  return response.data;
-};
-
-export const probarConexionZabbix = async (
-  token: string,
-  data: { url: string; usuario: string; password: string }
-): Promise<{ success: true }> => {
-  const response = await axios.post(`${API_URL}/empresas/zabbix-test`, data, {
     headers: { Authorization: `Bearer ${token}` }
   });
   return response.data;

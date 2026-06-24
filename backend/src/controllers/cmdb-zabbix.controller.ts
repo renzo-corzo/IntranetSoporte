@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { zabbixLogin, getZabbixHostsFull, getZabbixConfigForEmpresa } from '../services/zabbixService';
+import { getZabbixHostsFull, resolverContextoZabbix } from '../services/zabbixService';
 import axios from 'axios';
 import prisma from '../lib/prisma';
 
@@ -7,13 +7,12 @@ import prisma from '../lib/prisma';
 export const getZabbixHosts = async (req: Request, res: Response) => {
   try {
     const empresaId = (req as any).empresaId;
-    const config = await getZabbixConfigForEmpresa(empresaId);
-    if (!config) {
-      return res.status(400).json({ error: 'Zabbix no está configurado para este cliente' });
+    const ctx = await resolverContextoZabbix(empresaId);
+    if ('error' in ctx) {
+      return res.status(400).json({ error: ctx.error });
     }
-
-    const token = await zabbixLogin(config);
-    const hosts = await getZabbixHostsFull(config.url, token);
+    const { config, token, groupIds } = ctx;
+    const hosts = await getZabbixHostsFull(config.url, token, groupIds);
 
     // Obtener uptime para cada host
     const hostsConUptime = await Promise.all(
@@ -100,13 +99,12 @@ export const sincronizarHost = async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Parámetros requeridos: zabbixHostId, cmdbTipo, accion' });
     }
 
-    const config = await getZabbixConfigForEmpresa(empresaId);
-    if (!config) {
-      return res.status(400).json({ error: 'Zabbix no está configurado para este cliente' });
+    const ctx = await resolverContextoZabbix(empresaId);
+    if ('error' in ctx) {
+      return res.status(400).json({ error: ctx.error });
     }
-
-    const token = await zabbixLogin(config);
-    const hosts = await getZabbixHostsFull(config.url, token);
+    const { config, token, groupIds } = ctx;
+    const hosts = await getZabbixHostsFull(config.url, token, groupIds);
     const zabbixHost = hosts.find((h: any) => h.hostid === zabbixHostId);
 
     if (!zabbixHost) {
@@ -308,12 +306,12 @@ export const sincronizarHost = async (req: Request, res: Response) => {
 export const buscarCoincidencias = async (req: Request, res: Response) => {
   try {
     const empresaId = (req as any).empresaId;
-    const config = await getZabbixConfigForEmpresa(empresaId);
-    if (!config) {
-      return res.status(400).json({ error: 'Zabbix no está configurado para este cliente' });
+    const ctx = await resolverContextoZabbix(empresaId);
+    if ('error' in ctx) {
+      return res.status(400).json({ error: ctx.error });
     }
-    const token = await zabbixLogin(config);
-    const hosts = await getZabbixHostsFull(config.url, token);
+    const { config, token, groupIds } = ctx;
+    const hosts = await getZabbixHostsFull(config.url, token, groupIds);
 
     const coincidencias = await Promise.all(
       hosts.map(async (host: any) => {

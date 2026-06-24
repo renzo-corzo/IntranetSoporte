@@ -8,20 +8,65 @@ export interface ZabbixConfig {
   password: string;
 }
 
-// Resuelve la config de Zabbix del cliente activo (cada empresa tiene su
-// propio servidor). Devuelve null si el cliente no la completó todavía.
-export async function getZabbixConfigForEmpresa(empresaId: string): Promise<ZabbixConfig | null> {
-  const empresa = await prisma.empresa.findUnique({ where: { id: empresaId } });
+// Resuelve la config de Zabbix global de la instalación (un único servidor
+// para todos los clientes). Devuelve null si todavía no se completó.
+export async function getZabbixConfigGlobal(): Promise<ZabbixConfig | null> {
+  const config = await prisma.configuracionSistema.findUnique({ where: { id: 1 } });
 
-  if (!empresa?.zabbixUrl || !empresa.zabbixUsuario || !empresa.zabbixPasswordCifrada || !empresa.zabbixIv || !empresa.zabbixAuthTag) {
+  if (!config?.zabbixUrl || !config.zabbixUsuario || !config.zabbixPasswordCifrada || !config.zabbixIv || !config.zabbixAuthTag) {
     return null;
   }
 
   return {
-    url: empresa.zabbixUrl,
-    usuario: empresa.zabbixUsuario,
-    password: decrypt(empresa.zabbixPasswordCifrada, empresa.zabbixIv, empresa.zabbixAuthTag)
+    url: config.zabbixUrl,
+    usuario: config.zabbixUsuario,
+    password: decrypt(config.zabbixPasswordCifrada, config.zabbixIv, config.zabbixAuthTag)
   };
+}
+
+// Busca el groupid de Zabbix a partir del nombre de grupo configurado en la
+// Empresa (Empresa.zabbixGrupo). Devuelve null si no existe ese grupo.
+export async function getHostGroupIdByName(url: string, authToken: string, nombreGrupo: string): Promise<string | null> {
+  const response = await axios.post(url, {
+    jsonrpc: "2.0",
+    method: "hostgroup.get",
+    params: {
+      output: ["groupid", "name"],
+      filter: { name: [nombreGrupo] }
+    },
+    auth: authToken,
+    id: 1
+  }) as ZabbixAxiosResponse;
+  const grupo = response.data.result?.[0];
+  return grupo ? grupo.groupid : null;
+}
+
+export type ZabbixContexto =
+  | { error: string }
+  | { config: ZabbixConfig; token: string; groupIds: string[] };
+
+// Centraliza lo que necesitan todos los endpoints que consultan Zabbix para
+// un cliente: credenciales globales + grupo de hosts de la Empresa + login +
+// resolución del grupo a groupid. Devuelve {error} listo para responder 400
+// si falta algo, o el contexto ya armado para llamar a getZabbixHostsFull.
+export async function resolverContextoZabbix(empresaId: string): Promise<ZabbixContexto> {
+  const config = await getZabbixConfigGlobal();
+  if (!config) {
+    return { error: "Zabbix no está configurado en el sistema. Contactá a un administrador." };
+  }
+
+  const empresa = await prisma.empresa.findUnique({ where: { id: empresaId } });
+  if (!empresa?.zabbixGrupo) {
+    return { error: "Este cliente no tiene un grupo de Zabbix asignado. Pedile a un admin que lo complete en Empresas." };
+  }
+
+  const token = await zabbixLogin(config);
+  const groupId = await getHostGroupIdByName(config.url, token, empresa.zabbixGrupo);
+  if (!groupId) {
+    return { error: `El grupo "${empresa.zabbixGrupo}" no existe en Zabbix` };
+  }
+
+  return { config, token, groupIds: [groupId] };
 }
 
 // Interfaces para tipado de respuestas de Zabbix
@@ -51,8 +96,10 @@ export async function zabbixLogin(config: ZabbixConfig) {
   return response.data.result; // token
 }
 
-// 2. Obtener hosts (equipos) con inventario, estado, interfaces, etiquetas y grupos
-export async function getZabbixHostsFull(url: string, authToken: string) {
+// 2. Obtener hosts (equipos) con inventario, estado, interfaces, etiquetas y
+// grupos. Si se pasa groupIds, filtra solo los hosts de esos grupos (así un
+// único servidor Zabbix puede separar los hosts de cada cliente por grupo).
+export async function getZabbixHostsFull(url: string, authToken: string, groupIds?: string[]) {
   const response = await axios.post(url, {
     jsonrpc: "2.0",
     method: "host.get",
@@ -61,7 +108,8 @@ export async function getZabbixHostsFull(url: string, authToken: string) {
       selectInventory: "extend",
       selectInterfaces: "extend",
       selectTags: "extend",
-      selectGroups: "extend"
+      selectGroups: "extend",
+      ...(groupIds && groupIds.length > 0 && { groupids: groupIds })
     },
     auth: authToken,
     id: 2

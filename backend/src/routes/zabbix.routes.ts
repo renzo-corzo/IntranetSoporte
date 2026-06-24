@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { zabbixLogin, getZabbixHostsFull, getProblemsByHost, getGraphsByHost, getDashboardsByHost, getWebMonitoringByHost, getZabbixConfigForEmpresa } from "../services/zabbixService";
+import { getZabbixHostsFull, getProblemsByHost, getGraphsByHost, getDashboardsByHost, getWebMonitoringByHost, resolverContextoZabbix } from "../services/zabbixService";
 import axios from "axios";
 import { verifyToken } from "../middlewares/auth.middleware";
 import { requireEmpresa, requireModulo } from "../middlewares/empresa.middleware";
@@ -13,14 +13,14 @@ router.use(requireModulo("relevamientos"));
 router.get("/hosts", async (req, res) => {
   try {
     const empresaId = (req as any).empresaId;
-    const config = await getZabbixConfigForEmpresa(empresaId);
-    if (!config) {
-      return res.status(400).json({ error: "Zabbix no está configurado para este cliente" });
+    const ctx = await resolverContextoZabbix(empresaId);
+    if ("error" in ctx) {
+      return res.status(400).json({ error: ctx.error });
     }
+    const { config, token, groupIds } = ctx;
     const webBase = config.url.replace(/\/api_jsonrpc\.php$/, "");
 
-    const token = await zabbixLogin(config);
-    const hosts = await getZabbixHostsFull(config.url, token);
+    const hosts = await getZabbixHostsFull(config.url, token, groupIds);
     
     const formatUptime = (seconds: number) => {
       if (!seconds || Number.isNaN(seconds)) return null;

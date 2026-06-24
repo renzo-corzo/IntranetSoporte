@@ -11,6 +11,17 @@ datasource db {
 model ConfiguracionSistema {
   id             Int      @id @default(1)
   rrhhHabilitado Boolean  @default(true)
+
+  // Integración Zabbix: un único servidor para toda la instalación (los
+  // clientes se distinguen por grupo de hosts, ver Empresa.zabbixGrupo).
+  // Password cifrado con el mismo mecanismo AES-256-GCM que usa Credencial
+  // (backend/src/utils/crypto.ts).
+  zabbixUrl             String?
+  zabbixUsuario         String?
+  zabbixPasswordCifrada String?
+  zabbixIv              String?
+  zabbixAuthTag         String?
+
   updatedAt      DateTime @updatedAt
 }
 
@@ -62,14 +73,10 @@ model Empresa {
   // Claves válidas: cmdb, stock, tareas, relevamientos, procedimientos, kb
   modulosHabilitados String[] @default(["cmdb", "stock", "tareas", "relevamientos", "procedimientos", "kb"])
 
-  // Integración Zabbix de este cliente (cada cliente tiene su propio servidor).
-  // "Configurado" = los 5 campos no nulos. Password cifrado con el mismo
-  // mecanismo AES-256-GCM que usa Credencial (backend/src/utils/crypto.ts).
-  zabbixUrl             String?
-  zabbixUsuario         String?
-  zabbixPasswordCifrada String?
-  zabbixIv              String?
-  zabbixAuthTag         String?
+  // Grupo de hosts en Zabbix que identifica a este cliente. Las credenciales
+  // de Zabbix son únicas para toda la instalación (ConfiguracionSistema);
+  // cada cliente solo filtra por su grupo dentro de ese mismo servidor.
+  zabbixGrupo String?
 
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt

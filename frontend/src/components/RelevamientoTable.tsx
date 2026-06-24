@@ -478,7 +478,7 @@ const RelevamientoTable: React.FC = () => {
         ) : zabbixNoConfigurado ? (
           <div className="p-8 text-center text-gray-500">
             <div className="text-lg font-medium mb-2">Zabbix no configurado</div>
-            <div className="text-sm">Este cliente no tiene Zabbix configurado. Pedile a un admin que lo complete en Empresas.</div>
+            <div className="text-sm">Este cliente no tiene un grupo de Zabbix asignado, o Zabbix no está configurado en el sistema. Pedile a un admin que lo complete en Clientes / Configuración.</div>
           </div>
         ) : errorZabbix ? (
           <div className="p-8 text-center text-red-500">
