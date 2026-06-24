@@ -7,6 +7,7 @@ import { createPortal } from "react-dom";
 // } from "@heroicons/react/24/outline";
 import { getRelevamientos } from "../apiRelevamientos";
 import { useAuth } from "../context/AuthContext";
+import { useEmpresa } from "../context/EmpresaContext";
 import axios from "axios";
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:4000/api";
@@ -41,6 +42,7 @@ interface HostDetail {
 
 const RelevamientoTable: React.FC = () => {
   const { token } = useAuth();
+  const { empresaActiva } = useEmpresa();
   const [relevamientos, setRelevamientos] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -273,7 +275,7 @@ const RelevamientoTable: React.FC = () => {
 
   useEffect(() => {
     const fetchData = async () => {
-      if (!token) return;
+      if (!token || !empresaActiva) return;
       setLoading(true);
       setError(null);
       try {
@@ -286,11 +288,11 @@ const RelevamientoTable: React.FC = () => {
       }
     };
     fetchData();
-  }, [token]);
+  }, [token, empresaActiva]);
 
   // Cargar hosts de Zabbix
   useEffect(() => {
-    if (!token) return;
+    if (!token || !empresaActiva) return;
     setLoadingZabbix(true);
     setErrorZabbix(null);
     setZabbixNoConfigurado(false);
@@ -310,7 +312,7 @@ const RelevamientoTable: React.FC = () => {
         }
       })
       .finally(() => setLoadingZabbix(false));
-  }, [token]);
+  }, [token, empresaActiva]);
 
   const getStatusColor = (status: string) => {
     switch (status?.toLowerCase()) {
