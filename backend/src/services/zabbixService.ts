@@ -107,6 +107,9 @@ export async function zabbixLogin(config: ZabbixConfig) {
   if (response.data.error) {
     throw new Error(response.data.error.data || response.data.error.message || "Error de autenticación en Zabbix");
   }
+  if (typeof response.data.result !== "string" || !response.data.result) {
+    throw new Error("La URL configurada no parece ser la API de Zabbix (no devolvió un token de sesión válido)");
+  }
   return response.data.result; // token
 }
 
