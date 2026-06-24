@@ -37,6 +37,9 @@ export async function getHostGroupIdByName(url: string, authToken: string, nombr
     auth: authToken,
     id: 1
   }) as ZabbixAxiosResponse;
+  if (response.data.error) {
+    throw new Error(response.data.error.data || response.data.error.message || "Error al consultar hostgroup.get en Zabbix");
+  }
   const grupo = response.data.result?.[0];
   return grupo ? grupo.groupid : null;
 }
