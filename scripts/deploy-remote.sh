@@ -20,18 +20,21 @@ mkdir -p "$BACKUP_DIR"
 BACKUP_FILE="${BACKUP_DIR}/db_backup_$(date +%Y%m%d_%H%M%S).sql"
 
 ENV_FILE="${REMOTE_BASE}/backend/.env"
-DB_NAME=$(grep -E '^DATABASE_URL' "$ENV_FILE" | sed -E 's|.*\/([^?"]*).* |\1|' | tr -d '\r' || echo "infra_caja")
+# DATABASE_URL completa (con credenciales), no solo el nombre de la DB: la
+# conexion por socket local con -U postgres/-U intranet falla por peer auth
+# (el rol de Postgres no coincide con el usuario del SO). Con la URL
+# completa, pg_dump conecta por TCP a localhost con el rol/password reales.
+DB_URL=$(grep -E '^DATABASE_URL' "$ENV_FILE" | sed -E 's/^DATABASE_URL=//' | tr -d '\r"')
 
-if pg_dump -U postgres "$DB_NAME" > "$BACKUP_FILE" 2>/dev/null; then
-  gzip "$BACKUP_FILE"
-  echo "[remote] Backup DB: ${BACKUP_FILE}.gz"
-elif pg_dump -U intranet "$DB_NAME" > "$BACKUP_FILE" 2>/dev/null; then
+if [ -n "$DB_URL" ] && pg_dump "$DB_URL" > "$BACKUP_FILE" 2>/tmp/pgdump_deploy_err.log; then
   gzip "$BACKUP_FILE"
   echo "[remote] Backup DB: ${BACKUP_FILE}.gz"
 else
   echo "[remote] ADVERTENCIA: No se pudo hacer backup de DB"
+  cat /tmp/pgdump_deploy_err.log 2>/dev/null
   rm -f "$BACKUP_FILE"
 fi
+rm -f /tmp/pgdump_deploy_err.log
 
 ls -t "${BACKUP_DIR}"/db_backup_*.sql.gz 2>/dev/null | tail -n +11 | xargs rm -f 2>/dev/null || true
 # ────────────────────────────────────────────────────────────────────────────
