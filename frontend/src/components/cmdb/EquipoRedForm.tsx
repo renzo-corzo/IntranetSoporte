@@ -1,6 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { XMarkIcon } from '@heroicons/react/24/outline';
-import { createEquipoRed, updateEquipoRed, type EquipoRed } from '../../services/cmdb.service';
+import {
+  createEquipoRed,
+  updateEquipoRed,
+  getCredenciales,
+  createCredencial,
+  updateCredencial,
+  type EquipoRed
+} from '../../services/cmdb.service';
 import { useAuth } from '../../context/AuthContext';
 
 interface Props {
@@ -13,7 +20,10 @@ const EquipoRedForm: React.FC<Props> = ({ equipo, onClose, onSuccess }) => {
   const { token } = useAuth();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  
+  const [usuario, setUsuario] = useState('');
+  const [password, setPassword] = useState('');
+  const [credencialId, setCredencialId] = useState<string | null>(null);
+
   const [formData, setFormData] = useState({
     nombre: '',
     tipo: 'SWITCH' as EquipoRed['tipo'],
@@ -47,13 +57,24 @@ const EquipoRedForm: React.FC<Props> = ({ equipo, onClose, onSuccess }) => {
         firmware: equipo.firmware || '',
         puertos: equipo.puertos?.toString() || ''
       });
+
+      if (token) {
+        getCredenciales('EQUIPO_RED', equipo.id, token)
+          .then(creds => {
+            if (creds.length > 0) {
+              setCredencialId(creds[0].id);
+              setUsuario(creds[0].usuario || '');
+            }
+          })
+          .catch(() => {});
+      }
     }
   }, [equipo]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!token) return;
-    
+
     setLoading(true);
     setError('');
 
@@ -64,12 +85,32 @@ const EquipoRedForm: React.FC<Props> = ({ equipo, onClose, onSuccess }) => {
         fechaBaja: formData.fechaBaja || null
       };
 
+      let equipoId = equipo?.id;
       if (equipo) {
         await updateEquipoRed(equipo.id, dataToSend, token);
       } else {
-        await createEquipoRed(dataToSend, token);
+        const nuevo = await createEquipoRed(dataToSend, token);
+        equipoId = nuevo.id;
       }
-      
+
+      if (equipoId && (usuario.trim() || password.trim())) {
+        if (credencialId) {
+          await updateCredencial(credencialId, {
+            nombre: 'Acceso principal',
+            usuario: usuario || undefined,
+            password: password || undefined
+          }, token);
+        } else if (password.trim()) {
+          await createCredencial({
+            nombre: 'Acceso principal',
+            usuario: usuario || undefined,
+            password,
+            tipoEquipo: 'EQUIPO_RED',
+            equipoId
+          }, token);
+        }
+      }
+
       onSuccess();
     } catch (err: any) {
       setError(err.response?.data?.error || 'Error al guardar equipo de red');
@@ -236,6 +277,33 @@ const EquipoRedForm: React.FC<Props> = ({ equipo, onClose, onSuccess }) => {
                 value={formData.fechaBaja}
                 onChange={(e) => setFormData({ ...formData, fechaBaja: e.target.value })}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+
+            <div className="md:col-span-2 mt-4">
+              <h3 className="text-lg font-semibold text-gray-700 mb-1">Acceso (opcional)</h3>
+              <p className="text-xs text-gray-500 mb-4">Se guarda cifrado. Si necesitás más de una credencial para este equipo, usá el botón "Credenciales" desde la lista.</p>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Usuario</label>
+              <input
+                type="text"
+                value={usuario}
+                onChange={(e) => setUsuario(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Contraseña {credencialId ? '(dejar vacío para no cambiar)' : ''}
+              </label>
+              <input
+                type="text"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 font-mono"
               />
             </div>
 

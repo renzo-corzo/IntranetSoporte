@@ -1,6 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { XMarkIcon } from '@heroicons/react/24/outline';
-import { createServidorFisico, updateServidorFisico, type ServidorFisico } from '../../services/cmdb.service';
+import {
+  createServidorFisico,
+  updateServidorFisico,
+  getCredenciales,
+  createCredencial,
+  updateCredencial,
+  type ServidorFisico
+} from '../../services/cmdb.service';
 import { useAuth } from '../../context/AuthContext';
 
 interface Props {
@@ -13,7 +20,10 @@ const ServidorFisicoForm: React.FC<Props> = ({ servidor, onClose, onSuccess }) =
   const { token } = useAuth();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  
+  const [usuario, setUsuario] = useState('');
+  const [password, setPassword] = useState('');
+  const [credencialId, setCredencialId] = useState<string | null>(null);
+
   const [formData, setFormData] = useState({
     nombre: '',
     ip: '',
@@ -53,13 +63,24 @@ const ServidorFisicoForm: React.FC<Props> = ({ servidor, onClose, onSuccess }) =
         fabricante: servidor.fabricante || '',
         modelo: servidor.modelo || ''
       });
+
+      if (token) {
+        getCredenciales('SERVIDOR_FISICO', servidor.id, token)
+          .then(creds => {
+            if (creds.length > 0) {
+              setCredencialId(creds[0].id);
+              setUsuario(creds[0].usuario || '');
+            }
+          })
+          .catch(() => {});
+      }
     }
   }, [servidor]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!token) return;
-    
+
     setLoading(true);
     setError('');
 
@@ -70,12 +91,32 @@ const ServidorFisicoForm: React.FC<Props> = ({ servidor, onClose, onSuccess }) =
         fechaBaja: formData.fechaBaja || null
       };
 
+      let equipoId = servidor?.id;
       if (servidor) {
         await updateServidorFisico(servidor.id, dataToSend, token);
       } else {
-        await createServidorFisico(dataToSend, token);
+        const nuevo = await createServidorFisico(dataToSend, token);
+        equipoId = nuevo.id;
       }
-      
+
+      if (equipoId && (usuario.trim() || password.trim())) {
+        if (credencialId) {
+          await updateCredencial(credencialId, {
+            nombre: 'Acceso principal',
+            usuario: usuario || undefined,
+            password: password || undefined
+          }, token);
+        } else if (password.trim()) {
+          await createCredencial({
+            nombre: 'Acceso principal',
+            usuario: usuario || undefined,
+            password,
+            tipoEquipo: 'SERVIDOR_FISICO',
+            equipoId
+          }, token);
+        }
+      }
+
       onSuccess();
     } catch (err: any) {
       setError(err.response?.data?.error || 'Error al guardar servidor');
@@ -274,6 +315,34 @@ const ServidorFisicoForm: React.FC<Props> = ({ servidor, onClose, onSuccess }) =
                 value={formData.garantia}
                 onChange={(e) => setFormData({ ...formData, garantia: e.target.value })}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+
+            {/* Acceso */}
+            <div className="md:col-span-2 mt-4">
+              <h3 className="text-lg font-semibold text-gray-700 mb-1">Acceso (opcional)</h3>
+              <p className="text-xs text-gray-500 mb-4">Se guarda cifrado. Si necesitás más de una credencial para este equipo, usá el botón "Credenciales" desde la lista.</p>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Usuario</label>
+              <input
+                type="text"
+                value={usuario}
+                onChange={(e) => setUsuario(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Contraseña {credencialId ? '(dejar vacío para no cambiar)' : ''}
+              </label>
+              <input
+                type="text"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 font-mono"
               />
             </div>
 
